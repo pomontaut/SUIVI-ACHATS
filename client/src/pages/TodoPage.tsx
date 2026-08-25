@@ -1,7 +1,13 @@
 import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
+import { PrioSelect } from "../components/PrioBadge";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import type { Todo } from "../types";
+
+const PRIO_ROW_BORDER: Record<string, string> = {
+  P0: "border-l-4 !border-l-red-400",
+  P1: "border-l-4 !border-l-amber-400",
+};
 
 export function TodoPage() {
   const opts = useOptions();
@@ -11,7 +17,12 @@ export function TodoPage() {
   });
 
   const columns: ColumnDef<Todo>[] = [
-    { key: "prio", label: "Priorité", type: "select", options: opts.PRIOS, width: "70px" },
+    {
+      key: "prio",
+      label: "Priorité",
+      width: "80px",
+      render: (d) => <PrioSelect value={d.prio} options={opts.PRIOS} onChange={(v) => update(d.id, { prio: v })} />,
+    },
     { key: "statut", label: "Statut", type: "select", options: opts.TD_STATUTS, width: "90px" },
     { key: "qui", label: "Qui", width: "130px" },
     { key: "quoi", label: "Quoi", width: "260px" },
@@ -21,6 +32,7 @@ export function TodoPage() {
   ];
 
   const quickFilters: QuickFilter<Todo>[] = [
+    { label: "Urgent (P0/P1)", predicate: (d) => ["P0", "P1"].includes(d.prio ?? "") && (d.statut ?? "Actif") !== "Clôturé" },
     { label: "Actif", predicate: (d) => (d.statut ?? "Actif") !== "Clôturé" },
     { label: "Clôturé", predicate: (d) => (d.statut ?? "Actif") === "Clôturé" },
     { label: "P0", predicate: (d) => (d.prio ?? "") === "P0" },
@@ -43,6 +55,7 @@ export function TodoPage() {
         onAdd={add}
         searchFields={["qui", "quoi", "action"]}
         quickFilters={quickFilters}
+        rowClassName={(d) => ((d.statut ?? "Actif") === "Clôturé" ? "" : (PRIO_ROW_BORDER[d.prio ?? ""] ?? ""))}
       />
     </div>
   );

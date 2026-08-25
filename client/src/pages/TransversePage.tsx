@@ -1,7 +1,14 @@
 import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
+import { PrioSelect } from "../components/PrioBadge";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
+import { prioRank } from "../lib/priority";
 import type { Transverse } from "../types";
+
+const PRIO_ROW_BORDER: Record<string, string> = {
+  P0: "border-l-4 !border-l-red-400",
+  P1: "border-l-4 !border-l-amber-400",
+};
 
 function isClosTr(d: Transverse): boolean {
   const prec = (d.prec ?? "").toLowerCase();
@@ -26,7 +33,12 @@ export function TransversePage() {
   });
 
   const columns: ColumnDef<Transverse>[] = [
-    { key: "prio", label: "Priorité", type: "select", options: opts.PRIOS, width: "70px" },
+    {
+      key: "prio",
+      label: "Priorité",
+      width: "80px",
+      render: (d) => <PrioSelect value={d.prio} options={opts.PRIOS} onChange={(v) => update(d.id, { prio: v })} />,
+    },
     { key: "statut", label: "Statut", type: "select", options: ["Actif", "Clôturé"], width: "90px" },
     { key: "date", label: "Date", type: "date", width: "85px" },
     { key: "dem", label: "Demandeur", width: "110px" },
@@ -41,6 +53,7 @@ export function TransversePage() {
   ];
 
   const quickFilters: QuickFilter<Transverse>[] = [
+    { label: "Urgent (P0/P1)", predicate: (d) => prioRank(d.prio) <= 1 && !isClosTr(d) },
     { label: "Actif", predicate: (d) => !isClosTr(d) },
     { label: "Clôturé", predicate: isClosTr },
     { label: "En attente", predicate: (d) => isAttTr(d) && !isClosTr(d) },
@@ -61,6 +74,7 @@ export function TransversePage() {
         onAdd={add}
         searchFields={["nom", "dem", "prec", "action"]}
         quickFilters={quickFilters}
+        rowClassName={(d) => (isClosTr(d) ? "" : (PRIO_ROW_BORDER[d.prio ?? ""] ?? ""))}
       />
     </div>
   );

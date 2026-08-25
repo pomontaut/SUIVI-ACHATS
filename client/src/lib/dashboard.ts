@@ -1,6 +1,7 @@
 import { dateVal } from "./tableFilter";
 import { isAtt, isClos } from "./etape";
 import { joursRetard, livraisonCategorie, parseFrDate, workingDaysBetween } from "./dates";
+import { isAutoPrioType, operationNeedsWarning, operationPrio, prioRank } from "./priority";
 import type { Livraison, Operation, Options, Todo, Transverse } from "../types";
 
 function num(v: string | null | undefined): number {
@@ -408,4 +409,69 @@ export function bilanPeriode(
   filtered.sort((a, b) => (b.sortKey?.getTime() ?? 0) - (a.sortKey?.getTime() ?? 0));
 
   return { all, filtered, entites };
+}
+
+// ===== Top 10 priorités (tous modules confondus) =====
+
+export interface TopPrioItem {
+  id: string;
+  origine: "Opérationnel" | "Transverse" | "To do";
+  prio: string;
+  sujet: string;
+  quoi: string;
+  ent: string;
+  echeance: string | null;
+  warning: boolean;
+}
+
+/** Les priorités Opérationnel sont toujours placées en tête (comme demandé) :
+ * on ne trie pas la liste combinée par priorité globale, on complète plutôt
+ * les 10 places avec Opérationnel d'abord, puis Transverse, puis To do. */
+export function top10Priorites(operations: Operation[], transverses: Transverse[], todos: Todo[]): TopPrioItem[] {
+  const opItems: TopPrioItem[] = operations
+    .filter((o) => !isClos(o.etape))
+    .map((o) => {
+      const kind = isAutoPrioType(o.type);
+      return {
+        id: o.id,
+        origine: "Opérationnel" as const,
+        prio: operationPrio(o),
+        sujet: o.nom || o.chant || "—",
+        quoi: o.prec || o.etape || "—",
+        ent: o.ent || "—",
+        echeance: kind === "exploitation" ? o.retourMax : kind === "sla" ? o.retour : null,
+        warning: operationNeedsWarning(o),
+      };
+    })
+    .sort((a, b) => prioRank(a.prio) - prioRank(b.prio));
+
+  const trItems: TopPrioItem[] = transverses
+    .filter((t) => (t.statut ?? "Actif") !== "Clôturé")
+    .map((t) => ({
+      id: t.id,
+      origine: "Transverse" as const,
+      prio: t.prio ?? "",
+      sujet: t.nom || t.dem || "—",
+      quoi: t.action || t.prec || "—",
+      ent: t.ent || "—",
+      echeance: t.retour,
+      warning: false,
+    }))
+    .sort((a, b) => prioRank(a.prio) - prioRank(b.prio));
+
+  const tdItems: TopPrioItem[] = todos
+    .filter((d) => (d.statut ?? "Actif") !== "Clôturé")
+    .map((d) => ({
+      id: d.id,
+      origine: "To do" as const,
+      prio: d.prio ?? "",
+      sujet: d.qui || "—",
+      quoi: d.quoi || d.action || "—",
+      ent: "—",
+      echeance: d.deadlineAction || d.deadline,
+      warning: needsWarningForDeadline(d.deadlineAction || d.deadline),
+    }))
+    .sort((a, b) => prioRank(a.prio) - prioRank(b.prio));
+
+  return [...opItems, ...trItems, ...tdItems].slice(0, 10);
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { compareVals, dateVal, numVal, isColFilterActive, type ColFilterValue } from "../lib/tableFilter";
 
 export interface ColumnDef<T> {
@@ -12,6 +12,9 @@ export interface ColumnDef<T> {
   options?: string[];
   width?: string;
   computed?: (row: T) => string;
+  /** Rendu personnalisé (JSX) - utilisé à la place de computed quand fourni,
+   * pour un badge coloré par ex. Le filtre/tri utilise alors filterValue. */
+  render?: (row: T) => ReactNode;
   /** Valeur utilisée pour le filtre/tri de cette colonne quand elle diffère
    * de row[key] (obligatoire pour une colonne calculée qu'on veut pouvoir
    * filtrer/trier, ex: un statut dérivé de deux dates). */
@@ -39,6 +42,8 @@ interface EditableTableProps<T extends { id: string }> {
   quickFilters?: QuickFilter<T>[];
   /** Interrupteur additionnel combinable avec le filtre rapide (ex: "Masquer clôturés"). */
   extraToggle?: { label: string; active: boolean; onToggle: () => void };
+  /** Classes CSS additionnelles par ligne (ex: liseré coloré selon l'urgence). */
+  rowClassName?: (row: T) => string;
 }
 
 function colValue<T>(col: ColumnDef<T>, row: T): string {
@@ -57,6 +62,7 @@ export function EditableTable<T extends { id: string }>({
   searchFields,
   quickFilters,
   extraToggle,
+  rowClassName,
 }: EditableTableProps<T>) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -76,7 +82,7 @@ export function EditableTable<T extends { id: string }>({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  const searchKeys = searchFields ?? (columns.filter((c) => !c.computed).map((c) => c.key) as (keyof T)[]);
+  const searchKeys = searchFields ?? (columns.filter((c) => !c.computed && !c.render).map((c) => c.key) as (keyof T)[]);
 
   const hasActiveFilters = Boolean(search) || activeQuick !== null || Object.values(colFilters).some(isColFilterActive) || sort !== null;
 
@@ -203,14 +209,14 @@ export function EditableTable<T extends { id: string }>({
               <tr>
                 {columns.map((c) => {
                   const colId = c.id ?? c.key;
-                  const canFilter = !c.noFilter && (!c.computed || Boolean(c.filterValue));
+                  const canFilter = !c.noFilter && (!(c.computed || c.render) || Boolean(c.filterValue));
                   const isSorted = sort?.key === colId;
                   const isFiltered = isColFilterActive(colFilters[colId]);
                   return (
                     <th key={colId} style={{ minWidth: c.width }} className="relative">
                       <div className="flex items-center gap-1">
                         <button
-                          className="flex items-center gap-1 hover:text-indigo-700"
+                          className="flex items-center gap-1 hover:text-indigo-300"
                           onClick={() => toggleSort(colId)}
                           title="Trier"
                         >
@@ -219,7 +225,7 @@ export function EditableTable<T extends { id: string }>({
                         </button>
                         {canFilter && (
                           <button
-                            className={`text-[10px] px-1 rounded ${isFiltered ? "text-indigo-600 font-bold" : "text-slate-400"}`}
+                            className={`text-[10px] px-1 rounded ${isFiltered ? "text-indigo-300 font-bold" : "text-slate-400 hover:text-slate-200"}`}
                             title="Filtrer"
                             onClick={() => setOpenFilter(openFilter === colId ? null : colId)}
                           >
@@ -250,11 +256,16 @@ export function EditableTable<T extends { id: string }>({
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((row) => (
-                <tr key={row.id} className="hover:bg-slate-50">
+              {visibleRows.map((row, rowIndex) => (
+                <tr
+                  key={row.id}
+                  className={`${rowIndex % 2 === 1 ? "bg-slate-50/60 hover:bg-indigo-50/60" : "hover:bg-indigo-50/60"} ${rowClassName?.(row) ?? ""}`}
+                >
                   {columns.map((c) => (
                     <td key={c.id ?? c.key}>
-                      {c.computed ? (
+                      {c.render ? (
+                        c.render(row)
+                      ) : c.computed ? (
                         <span className="text-slate-600">{c.computed(row)}</span>
                       ) : (
                         <Cell

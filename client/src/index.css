@@ -4,18 +4,25 @@ body {
   @apply bg-slate-100 text-slate-800;
 }
 
+/* Rendu "grille type tableur" pour les tableaux éditables : bordures
+ * verticales + horizontales complètes, en-tête contrasté, cellules
+ * compactes - plus proche d'un tableau Excel qu'un simple tableau HTML. */
 table {
-  @apply text-sm;
+  @apply text-sm border-collapse;
 }
 
 th {
-  @apply sticky top-0 bg-slate-200 text-left px-2 py-1.5 font-semibold whitespace-nowrap;
+  @apply sticky top-0 z-10 bg-slate-700 text-slate-100 text-left px-2 py-2 font-semibold whitespace-nowrap border border-slate-600 text-xs uppercase tracking-wide;
 }
 
 td {
-  @apply px-2 py-1 border-t border-slate-200 align-top;
+  @apply px-1.5 py-1 border border-slate-200 align-middle;
 }
 
 .input {
-  @apply w-full rounded border border-slate-300 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400;
+  @apply w-full rounded border border-transparent bg-transparent px-1.5 py-0.5 text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-1 focus:ring-indigo-400 hover:bg-white/70;
+}
+
+select.input {
+  @apply cursor-pointer;
 }
