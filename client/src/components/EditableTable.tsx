@@ -202,8 +202,8 @@ export function EditableTable<T extends { id: string }>({
         <span className="text-xs text-slate-400">{visibleRows.length} / {rows.length}</span>
       </div>
 
-      <div className="rounded-lg border border-slate-300 bg-white shadow-sm">
-        <div className="max-h-[70vh] overflow-auto rounded-t-lg">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="max-h-[70vh] overflow-auto rounded-t-xl">
           <table className="w-full border-collapse">
             <thead>
               <tr>
@@ -216,7 +216,7 @@ export function EditableTable<T extends { id: string }>({
                     <th key={colId} style={{ minWidth: c.width }} className="relative">
                       <div className="flex items-center gap-1">
                         <button
-                          className="flex items-center gap-1 hover:text-indigo-300"
+                          className="flex items-center gap-1 hover:text-indigo-600"
                           onClick={() => toggleSort(colId)}
                           title="Trier"
                         >
@@ -225,7 +225,7 @@ export function EditableTable<T extends { id: string }>({
                         </button>
                         {canFilter && (
                           <button
-                            className={`text-[10px] px-1 rounded ${isFiltered ? "text-indigo-300 font-bold" : "text-slate-400 hover:text-slate-200"}`}
+                            className={`text-[10px] px-1 rounded ${isFiltered ? "text-indigo-600 font-bold" : "text-slate-400 hover:text-slate-600"}`}
                             title="Filtrer"
                             onClick={() => setOpenFilter(openFilter === colId ? null : colId)}
                           >
