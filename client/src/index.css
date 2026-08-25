@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+body {
+  @apply bg-slate-100 text-slate-800;
+}
+
+table {
+  @apply text-sm;
+}
+
+th {
+  @apply sticky top-0 bg-slate-200 text-left px-2 py-1.5 font-semibold whitespace-nowrap;
+}
+
+td {
+  @apply px-2 py-1 border-t border-slate-200 align-top;
+}
+
+.input {
+  @apply w-full rounded border border-slate-300 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400;
+}

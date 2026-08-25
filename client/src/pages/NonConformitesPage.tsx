@@ -1,0 +1,37 @@
+import { EditableTable, type ColumnDef } from "../components/EditableTable";
+import { useResource } from "../hooks/useResource";
+import { useOptions } from "../hooks/useOptions";
+import type { NonConformite } from "../types";
+
+export function NonConformitesPage() {
+  const opts = useOptions();
+  const { rows, add, update, remove, loading } = useResource<NonConformite>("non-conformites", {
+    statutNC: "En cours",
+  });
+
+  const columns: ColumnDef<NonConformite>[] = [
+    { key: "date", label: "Date NC", type: "date", width: "85px" },
+    { key: "statutNC", label: "Statut", type: "select", options: opts.NC_STATUTS_SIMPLE, width: "100px" },
+    { key: "fournisseur", label: "Fournisseur", width: "120px" },
+    { key: "ent", label: "Entité", type: "select", options: opts.ENTITES, width: "80px" },
+    { key: "chant", label: "N° chantier", width: "85px" },
+    { key: "nom", label: "Nom du chantier", width: "150px" },
+    { key: "ctx", label: "Contact", width: "100px" },
+    { key: "montantCmd", label: "Montant cmd CHF", type: "num", width: "95px" },
+    { key: "catNC", label: "Catégorie NC", type: "select", options: opts.NC_TYPOLOGIES, width: "150px" },
+    { key: "typeNC", label: "Gravité", type: "select", options: opts.NC_TYPES, width: "90px" },
+    { key: "montantNC", label: "Montant estimé NC", type: "num", width: "105px" },
+    { key: "statut", label: "Statut détaillé", type: "select", options: opts.NC_STATUTS, width: "170px" },
+    { key: "noteCredit", label: "Note crédit CHF", type: "num", width: "105px" },
+    { key: "rem", label: "Remarques", width: "200px" },
+  ];
+
+  if (loading) return <p className="p-4 text-slate-500">Chargement…</p>;
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold mb-3">Non-conformités fournisseur ({rows.length})</h2>
+      <EditableTable columns={columns} rows={rows} onUpdate={update} onDelete={remove} onAdd={add} />
+    </div>
+  );
+}
