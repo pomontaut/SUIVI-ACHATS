@@ -4,19 +4,19 @@ body {
   @apply bg-slate-100 text-slate-800;
 }
 
-/* Rendu "grille type tableur" pour les tableaux éditables : bordures
- * verticales + horizontales complètes, en-tête contrasté, cellules
- * compactes - plus proche d'un tableau Excel qu'un simple tableau HTML. */
+/* Rendu de tableau plus doux qu'une grille de tableur : uniquement des
+ * séparateurs horizontaux discrets entre les lignes, pas de quadrillage
+ * vertical, en-tête clair avec juste une ligne de soulignement. */
 table {
   @apply text-sm border-collapse;
 }
 
 th {
-  @apply sticky top-0 z-10 bg-slate-700 text-slate-100 text-left px-2 py-2 font-semibold whitespace-nowrap border border-slate-600 text-xs uppercase tracking-wide;
+  @apply sticky top-0 z-10 bg-slate-50 text-slate-500 text-left px-2.5 py-2.5 font-medium whitespace-nowrap border-b-2 border-slate-200 text-xs uppercase tracking-wide;
 }
 
 td {
-  @apply px-1.5 py-1 border border-slate-200 align-middle;
+  @apply px-2.5 py-1.5 border-b border-slate-100 align-middle;
 }
 
 .input {
