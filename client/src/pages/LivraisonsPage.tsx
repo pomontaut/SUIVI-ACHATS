@@ -1,7 +1,7 @@
-import { EditableTable, type ColumnDef } from "../components/EditableTable";
+import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
-import { statutLivraison } from "../lib/dates";
+import { livraisonCategorie, statutLivraisonLabel } from "../lib/dates";
 import type { Livraison } from "../types";
 
 export function LivraisonsPage() {
@@ -11,7 +11,14 @@ export function LivraisonsPage() {
   });
 
   const columns: ColumnDef<Livraison>[] = [
-    { key: "chant", id: "statutCalcule", label: "Statut", computed: (r) => statutLivraison(r.dateLivraison, r.dateLivraisonReelle), width: "130px" },
+    {
+      key: "chant",
+      id: "statutCalcule",
+      label: "Statut",
+      computed: (r) => statutLivraisonLabel(r.dateLivraison, r.dateLivraisonReelle),
+      filterValue: (r) => livraisonCategorie(r.dateLivraison, r.dateLivraisonReelle),
+      width: "130px",
+    },
     { key: "chant", label: "N° Chantier", width: "80px" },
     { key: "nom", label: "Nom du chantier", width: "160px" },
     { key: "numCmd", label: "N° Commande", width: "88px" },
@@ -27,12 +34,26 @@ export function LivraisonsPage() {
     { key: "remLiv", label: "Remarques", width: "180px" },
   ];
 
+  const quickFilters: QuickFilter<Livraison>[] = [
+    { label: "En cours", predicate: (d) => livraisonCategorie(d.dateLivraison, d.dateLivraisonReelle) === "encours" },
+    { label: "En retard", predicate: (d) => livraisonCategorie(d.dateLivraison, d.dateLivraisonReelle) === "retard" },
+    { label: "Clôturés", predicate: (d) => livraisonCategorie(d.dateLivraison, d.dateLivraisonReelle) === "livre" },
+  ];
+
   if (loading) return <p className="p-4 text-slate-500">Chargement…</p>;
 
   return (
     <div>
       <h2 className="text-lg font-semibold mb-3">Suivi des livraisons ({rows.length})</h2>
-      <EditableTable columns={columns} rows={rows} onUpdate={update} onDelete={remove} onAdd={add} />
+      <EditableTable
+        columns={columns}
+        rows={rows}
+        onUpdate={update}
+        onDelete={remove}
+        onAdd={add}
+        searchFields={["chant", "nom", "numCmd", "fournisseur", "prec"]}
+        quickFilters={quickFilters}
+      />
     </div>
   );
 }

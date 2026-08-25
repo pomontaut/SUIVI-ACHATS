@@ -134,23 +134,6 @@ export interface Options {
   NC_STATUTS: string[];
   AO_STATUT_OPTS: string[];
   TD_STATUTS: string[];
-}
-
-export interface DashboardData {
-  counts: {
-    operations: number;
-    transverses: number;
-    todos: number;
-    nonConformites: number;
-    livraisons: number;
-  };
-  opStatus: { clos: number; attente: number; enCours: number };
-  parEtape: { label: string; value: number }[];
-  parEntite: { label: string; value: number }[];
-  topFournisseurs: { label: string; value: number }[];
-  montantTotal: number;
-  gainTotal: number;
-  ncParCategorie: { label: string; value: number }[];
-  ncParGravite: { label: string; value: number }[];
-  livraisons: { onTime: number; retard: number; tauxService: number | null };
+  PERT_CATS: { key: string; label: string; kw: string[] }[];
+  TRANCHES: { lbl: string; min: number; max: number | null; col: string }[];
 }

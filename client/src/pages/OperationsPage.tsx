@@ -1,10 +1,13 @@
-import { EditableTable, type ColumnDef } from "../components/EditableTable";
+import { useState } from "react";
+import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
+import { isAtt, isClos } from "../lib/etape";
 import type { Operation } from "../types";
 
 export function OperationsPage() {
   const opts = useOptions();
+  const [hideClosed, setHideClosed] = useState(false);
   const { rows, add, update, remove, loading } = useResource<Operation>("operations", {
     prio: "P2",
     ent: opts.ENTITES[0] ?? "",
@@ -41,12 +44,35 @@ export function OperationsPage() {
     { key: "comment", label: "Commentaire", type: "select", options: opts.COMMENT_OPTS, width: "180px" },
   ];
 
+  // Reprend les filtres rapides de l'outil d'origine (opFilter) : chaque
+  // prédicat respecte en plus l'interrupteur "Masquer clôturés" (opHideClos),
+  // qui peut se combiner à n'importe quel filtre rapide.
+  const withHide = (pred: (o: Operation) => boolean) => (o: Operation) => (!hideClosed || !isClos(o.etape)) && pred(o);
+  const quickFilters: QuickFilter<Operation>[] = [
+    { label: "Actif", predicate: withHide((o) => !isClos(o.etape)) },
+    { label: "Clôturé", predicate: withHide((o) => isClos(o.etape)) },
+    { label: "En attente", predicate: withHide((o) => isAtt(o.etape)) },
+    { label: "BAT GE", predicate: withHide((o) => (o.ent ?? "").toUpperCase().includes("GE")) },
+    { label: "BAT VD", predicate: withHide((o) => (o.ent ?? "").toUpperCase().includes("VD")) },
+    { label: "GC", predicate: withHide((o) => (o.ent ?? "").toUpperCase() === "GC") },
+    { label: "EG", predicate: withHide((o) => (o.ent ?? "").toUpperCase() === "EG") },
+  ];
+
   if (loading) return <p className="p-4 text-slate-500">Chargement…</p>;
 
   return (
     <div>
       <h2 className="text-lg font-semibold mb-3">Suivi opérationnel des achats ({rows.length})</h2>
-      <EditableTable columns={columns} rows={rows} onUpdate={update} onDelete={remove} onAdd={add} />
+      <EditableTable
+        columns={columns}
+        rows={rows}
+        onUpdate={update}
+        onDelete={remove}
+        onAdd={add}
+        searchFields={["nom", "dem", "chant", "fourn", "fournisseur", "prec"]}
+        quickFilters={quickFilters}
+        extraToggle={{ label: "Masquer clôturés", active: hideClosed, onToggle: () => setHideClosed((h) => !h) }}
+      />
     </div>
   );
 }
