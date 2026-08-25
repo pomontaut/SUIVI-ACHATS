@@ -1,5 +1,8 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" pour le dev local (glibc), "linux-musl-openssl-3.0.x" pour
+  // l'image de production node:22-alpine (musl + OpenSSL 3).
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
