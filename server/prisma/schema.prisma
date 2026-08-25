@@ -107,6 +107,10 @@ model NonConformite {
 // Suivi des livraisons (délais, retards, statuts de réception)
 model Livraison {
   id                  String   @id @default(cuid())
+  // Lien vers l'opération source quand la ligne est reportée automatiquement
+  // depuis le suivi opérationnel (cf. syncLivraisonsFromOperations) ; null
+  // pour une ligne saisie manuellement, indépendante de l'Opérationnel.
+  operationId         String?  @unique
   chant               String?
   nom                 String?
   numCmd              String?
