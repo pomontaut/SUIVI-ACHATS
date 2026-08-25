@@ -29,6 +29,12 @@ COPY --from=server-build /app/server/dist server/dist
 COPY --from=server-build /app/node_modules/@prisma node_modules/@prisma
 COPY --from=client-build /app/client/dist client/dist
 
+# Répertoire dédié aux données persistantes (à monter en volume sur la
+# plateforme de déploiement) : distinct de server/prisma pour ne jamais
+# masquer les migrations/le seed copiés dans l'image quand le volume,
+# vide au premier montage, est attaché.
+RUN mkdir -p /app/data
+
 EXPOSE 3001
 # Applique les migrations (et le seed initial si la base est vide) puis démarre l'API,
 # qui sert aussi le build du client.

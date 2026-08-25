@@ -56,17 +56,29 @@ les données initiales si la base est vide.
 
 Variables d'environnement à définir sur la plateforme :
 
-- `DATABASE_URL` — ex. `file:./dev.db` pour garder SQLite
+- `DATABASE_URL` = `file:/app/data/dev.db`
 - `PORT` — fournie automatiquement par Railway
 
-**Important — persistance des données** : SQLite stocke tout dans un fichier
-sur le disque du conteneur. Sur Railway (et la plupart des PaaS), le disque
-d'un service est éphémère par défaut : sans volume monté, les données seraient
-réinitialisées à chaque redéploiement. Pour un usage réel, monter un **volume
-Railway** sur `/app/server/prisma` (pour conserver `dev.db` entre les
-déploiements), ou migrer vers un addon PostgreSQL managé (changer le
-`provider` du datasource dans `server/prisma/schema.prisma` et régénérer les
-migrations en conséquence).
+**Important — persistance des données**. SQLite stocke tout dans un fichier
+sur le disque du conteneur, qui est éphémère par défaut sur Railway (et la
+plupart des PaaS) : sans volume monté, les données seraient réinitialisées à
+chaque redéploiement.
+
+Pour un usage réel, sur Railway :
+
+1. Ouvrir le service → **Settings → Volumes → New Volume**
+2. Mount path : **`/app/data`**
+3. Variables → `DATABASE_URL` = **`file:/app/data/dev.db`**
+
+⚠️ Ne pas monter le volume sur `/app/server/prisma` : ce dossier contient les
+migrations et le seed copiés dans l'image Docker, et un volume est **vide**
+au premier montage — il masquerait ces fichiers au lieu de les compléter,
+cassant `prisma migrate deploy`. `/app/data` est un répertoire dédié, créé
+vide par le `Dockerfile` et sans rien d'autre dedans, prévu pour ça.
+
+Alternative : migrer vers un addon PostgreSQL managé (changer le `provider`
+du datasource dans `server/prisma/schema.prisma` et régénérer les migrations
+en conséquence).
 
 ## Données d'origine
 
