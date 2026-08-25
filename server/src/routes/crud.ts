@@ -13,10 +13,11 @@ interface CrudDelegate<T> {
  * model. Every module (opérationnel, transverse, todo, ...) has the same
  * shape of interaction, so we avoid repeating this five times.
  */
-export function crudRouter<T>(delegate: CrudDelegate<T>): Router {
+export function crudRouter<T>(delegate: CrudDelegate<T>, options?: { beforeList?: () => Promise<void> }): Router {
   const router = Router();
 
   router.get("/", async (_req, res) => {
+    if (options?.beforeList) await options.beforeList();
     const rows = await delegate.findMany({ orderBy: { createdAt: "asc" } });
     res.json(rows);
   });

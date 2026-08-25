@@ -4,6 +4,45 @@ import { useOptions } from "../hooks/useOptions";
 import { livraisonCategorie, statutLivraisonLabel } from "../lib/dates";
 import type { Livraison } from "../types";
 
+/** Champ "miroir" reporté automatiquement depuis une opération liée
+ * (syncLivraisonsFromOperations) : affiché en lecture seule pour ces
+ * lignes (toute modification serait écrasée au prochain rechargement),
+ * éditable normalement pour une ligne saisie manuellement. */
+function mirrorColumn(
+  key: keyof Livraison & string,
+  label: string,
+  width: string,
+  update: (id: string, patch: Partial<Livraison>) => void,
+  opts?: { type?: ColumnDef<Livraison>["type"]; options?: string[] },
+): ColumnDef<Livraison> {
+  return {
+    key,
+    label,
+    width,
+    type: opts?.type,
+    options: opts?.options,
+    render: (r) => {
+      const value = (r[key] as string | null) ?? "";
+      if (r.operationId) return <span className="text-slate-600">{value || "—"}</span>;
+      if (opts?.type === "select") {
+        return (
+          <select className="input" value={value} onChange={(e) => update(r.id, { [key]: e.target.value } as Partial<Livraison>)}>
+            <option value=""></option>
+            {(opts.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        );
+      }
+      return (
+        <input
+          className="input"
+          defaultValue={value}
+          onBlur={(e) => { if (e.target.value !== value) update(r.id, { [key]: e.target.value } as Partial<Livraison>); }}
+        />
+      );
+    },
+  };
+}
+
 export function LivraisonsPage() {
   const opts = useOptions();
   const { rows, add, update, remove, loading } = useResource<Livraison>("livraisons", {
@@ -19,17 +58,31 @@ export function LivraisonsPage() {
       filterValue: (r) => livraisonCategorie(r.dateLivraison, r.dateLivraisonReelle),
       width: "130px",
     },
-    { key: "chant", label: "N° Chantier", width: "80px" },
-    { key: "nom", label: "Nom du chantier", width: "160px" },
-    { key: "numCmd", label: "N° Commande", width: "88px" },
-    { key: "ent", label: "Entité", type: "select", options: opts.ENTITES, width: "72px" },
-    { key: "dem", label: "Demandeur", width: "100px" },
-    { key: "fournisseur", label: "Fournisseur", width: "130px" },
-    { key: "prec", label: "Produit / Préc.", width: "140px" },
-    { key: "montant", label: "Montant CHF", type: "num", width: "90px" },
-    { key: "dateCmd", label: "Date cmd", type: "date", width: "82px" },
+    {
+      key: "operationId",
+      label: "Origine",
+      width: "100px",
+      render: (r) =>
+        r.operationId ? (
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700" title="Reportée automatiquement depuis le suivi opérationnel">
+            🔗 Opérationnel
+          </span>
+        ) : (
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">Manuelle</span>
+        ),
+      filterValue: (r) => (r.operationId ? "Opérationnel" : "Manuelle"),
+    },
+    mirrorColumn("chant", "N° Chantier", "80px", update),
+    mirrorColumn("nom", "Nom du chantier", "160px", update),
+    mirrorColumn("numCmd", "N° Commande", "88px", update),
+    mirrorColumn("ent", "Entité", "72px", update, { type: "select", options: opts.ENTITES }),
+    mirrorColumn("dem", "Demandeur", "100px", update),
+    mirrorColumn("fournisseur", "Fournisseur", "130px", update),
+    mirrorColumn("prec", "Produit / Préc.", "140px", update),
+    mirrorColumn("montant", "Montant CHF", "90px", update, { type: "num" }),
+    mirrorColumn("dateCmd", "Date cmd", "82px", update, { type: "date" }),
     { key: "dateConfirm", label: "Date confirm.", type: "date", width: "90px" },
-    { key: "dateLivraison", label: "Date liv. prévue", type: "date", width: "92px" },
+    mirrorColumn("dateLivraison", "Date liv. prévue", "92px", update, { type: "date" }),
     { key: "dateLivraisonReelle", label: "Date liv. réelle", type: "date", width: "92px" },
     { key: "remLiv", label: "Remarques", width: "180px" },
   ];
@@ -44,13 +97,18 @@ export function LivraisonsPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-3">Suivi des livraisons ({rows.length})</h2>
+      <h2 className="text-lg font-semibold mb-1">Suivi des livraisons ({rows.length})</h2>
+      <p className="text-xs text-slate-500 mb-3">
+        Les lignes 🔗 sont reportées automatiquement depuis le suivi opérationnel (chantiers avec n° de commande) ;
+        seules les dates de confirmation/réception et les remarques restent à compléter ici.
+      </p>
       <EditableTable
         columns={columns}
         rows={rows}
         onUpdate={update}
         onDelete={remove}
         onAdd={add}
+        addLabel="+ Ajouter une ligne manuelle"
         searchFields={["chant", "nom", "numCmd", "fournisseur", "prec"]}
         quickFilters={quickFilters}
       />

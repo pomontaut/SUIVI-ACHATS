@@ -353,7 +353,7 @@ function ColumnFilterPopover<T>({
   if (type === "num") {
     const cur = (value && !Array.isArray(value) && "min" in value ? value : {}) as { min?: string; max?: string };
     return (
-      <div className="absolute z-20 top-full left-0 mt-1 w-48 rounded-md border border-slate-300 bg-white shadow-lg p-3 text-xs font-normal" onClick={(e) => e.stopPropagation()}>
+      <div className="absolute z-20 top-full left-0 mt-1 w-48 rounded-md border border-slate-300 bg-white text-slate-800 shadow-lg p-3 text-xs font-normal" onClick={(e) => e.stopPropagation()}>
         <div className="text-slate-500 mb-1">Min</div>
         <input className="input mb-2" placeholder="0" defaultValue={cur.min} onBlur={(e) => onChange({ ...cur, min: e.target.value })} />
         <div className="text-slate-500 mb-1">Max</div>
@@ -366,7 +366,7 @@ function ColumnFilterPopover<T>({
   if (type === "date") {
     const cur = (value && !Array.isArray(value) && "from" in value ? value : {}) as { from?: string; to?: string };
     return (
-      <div className="absolute z-20 top-full left-0 mt-1 w-48 rounded-md border border-slate-300 bg-white shadow-lg p-3 text-xs font-normal" onClick={(e) => e.stopPropagation()}>
+      <div className="absolute z-20 top-full left-0 mt-1 w-48 rounded-md border border-slate-300 bg-white text-slate-800 shadow-lg p-3 text-xs font-normal" onClick={(e) => e.stopPropagation()}>
         <div className="text-slate-500 mb-1">De</div>
         <input className="input mb-2" placeholder="jj/mm/aa" defaultValue={cur.from} onBlur={(e) => onChange({ ...cur, from: e.target.value })} />
         <div className="text-slate-500 mb-1">À</div>
@@ -385,7 +385,7 @@ function ColumnFilterPopover<T>({
   }
 
   return (
-    <div className="absolute z-20 top-full left-0 mt-1 w-56 rounded-md border border-slate-300 bg-white shadow-lg p-3 text-xs font-normal" onClick={(e) => e.stopPropagation()}>
+    <div className="absolute z-20 top-full left-0 mt-1 w-56 rounded-md border border-slate-300 bg-white text-slate-800 shadow-lg p-3 text-xs font-normal" onClick={(e) => e.stopPropagation()}>
       <input
         className="input mb-2"
         placeholder="Rechercher…"

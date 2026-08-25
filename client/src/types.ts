@@ -82,6 +82,7 @@ export interface NonConformite extends Base {
 }
 
 export interface Livraison extends Base {
+  operationId: string | null;
   chant: string | null;
   nom: string | null;
   numCmd: string | null;

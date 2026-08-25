@@ -7,6 +7,7 @@ import { prisma } from "./lib/prisma.js";
 import { crudRouter } from "./routes/crud.js";
 import { optionsRouter } from "./routes/options.js";
 import { fournisseursRouter } from "./routes/fournisseurs.js";
+import { syncLivraisonsFromOperations } from "./lib/syncLivraisons.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -20,7 +21,7 @@ app.use("/api/operations", crudRouter(prisma.operation));
 app.use("/api/transverses", crudRouter(prisma.transverse));
 app.use("/api/todos", crudRouter(prisma.todo));
 app.use("/api/non-conformites", crudRouter(prisma.nonConformite));
-app.use("/api/livraisons", crudRouter(prisma.livraison));
+app.use("/api/livraisons", crudRouter(prisma.livraison, { beforeList: syncLivraisonsFromOperations }));
 app.use("/api/appels-offres", crudRouter(prisma.appelOffre));
 app.use("/api/fournisseurs", fournisseursRouter);
 app.use("/api/options", optionsRouter);

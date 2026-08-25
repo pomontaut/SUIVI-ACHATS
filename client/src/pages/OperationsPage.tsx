@@ -12,6 +12,15 @@ const PRIO_ROW_BORDER: Record<string, string> = {
   P1: "border-l-4 !border-l-amber-400",
 };
 
+/** Reprend le calcul de gainPct de l'outil d'origine : pourcentage
+ * d'économie (positif) ou de dépassement (négatif) par rapport au budget. */
+function gainPct(o: Operation): number | null {
+  const budget = parseFloat(o.budget ?? "");
+  const gain = parseFloat(o.gain ?? "");
+  if (Number.isNaN(budget) || budget === 0 || Number.isNaN(gain)) return null;
+  return Math.round(((-gain / budget) * 100) * 10) / 10;
+}
+
 export function OperationsPage() {
   const opts = useOptions();
   const [hideClosed, setHideClosed] = useState(false);
@@ -24,6 +33,25 @@ export function OperationsPage() {
   });
 
   const columns: ColumnDef<Operation>[] = [
+    {
+      key: "vu",
+      label: "✓ Vu",
+      type: "bool",
+      width: "40px",
+      noFilter: true,
+    },
+    {
+      key: "etape",
+      id: "etapeStatut",
+      label: "Statut",
+      width: "80px",
+      render: (o) => (
+        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${isClos(o.etape) ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}`}>
+          {isClos(o.etape) ? "Clôturé" : "En cours"}
+        </span>
+      ),
+      filterValue: (o) => (isClos(o.etape) ? "Clôturé" : "En cours"),
+    },
     {
       key: "prio",
       label: "Priorité",
@@ -51,7 +79,8 @@ export function OperationsPage() {
     { key: "impl", label: "Impl.", type: "select", options: opts.IMPL, width: "70px" },
     { key: "fourn", label: "Fournitures", type: "select", options: opts.FOURNITURES, width: "130px" },
     { key: "prec", label: "Précisions", width: "140px" },
-    { key: "etape", label: "Étape", type: "select", options: opts.ETAPES, width: "170px" },
+    { key: "etape", id: "etapeSelect", label: "Étape", type: "select", options: opts.ETAPES, width: "170px" },
+    { key: "consult", label: "Consultation", width: "130px" },
     { key: "rem", label: "Remarques", width: "150px" },
     { key: "launch", label: "Lancement", type: "date", width: "80px" },
     { key: "retour", label: "Retour", type: "date", width: "80px" },
@@ -63,8 +92,20 @@ export function OperationsPage() {
     { key: "typeBudget", label: "Type budget", type: "select", options: opts.BUDGET_TYPE_OPTS, width: "150px" },
     { key: "montant", label: "Montant", type: "num", width: "90px" },
     { key: "gain", label: "Gain/perte", type: "num", width: "80px" },
+    {
+      key: "gain",
+      id: "gainPct",
+      label: "Gain/perte %",
+      width: "80px",
+      render: (o) => {
+        const pct = gainPct(o);
+        return <span className={pct !== null && pct < 0 ? "text-red-700" : pct !== null && pct > 0 ? "text-green-700" : "text-slate-400"}>{pct !== null ? `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%` : "—"}</span>;
+      },
+      noFilter: true,
+    },
     { key: "tco", label: "TCO", type: "select", options: opts.TCO_OPTS, width: "60px" },
     { key: "fournisseur", label: "Fournisseur", width: "130px" },
+    { key: "typeActionAchat", label: "Type action achat", type: "select", options: opts.COMMENT_OPTS, width: "180px" },
     { key: "comment", label: "Commentaire", type: "select", options: opts.COMMENT_OPTS, width: "180px" },
   ];
 
