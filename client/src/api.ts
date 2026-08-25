@@ -22,7 +22,6 @@ export function makeResource<T extends { id: string }>(name: string) {
 
 export const api = {
   options: () => request<import("./types").Options>("/options"),
-  dashboard: () => request<import("./types").DashboardData>("/dashboard"),
   fournisseurs: (q: string) =>
     request<import("./types").Fournisseur[]>(`/fournisseurs?q=${encodeURIComponent(q)}`),
 };

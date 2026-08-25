@@ -1,4 +1,4 @@
-import { EditableTable, type ColumnDef } from "../components/EditableTable";
+import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import type { NonConformite } from "../types";
@@ -26,12 +26,28 @@ export function NonConformitesPage() {
     { key: "rem", label: "Remarques", width: "200px" },
   ];
 
+  const quickFilters: QuickFilter<NonConformite>[] = [
+    { label: "En cours", predicate: (d) => (d.statutNC ?? "En cours") !== "Clôturé" },
+    { label: "Clôturées", predicate: (d) => (d.statutNC ?? "En cours") === "Clôturé" },
+    { label: "Critique", predicate: (d) => (d.typeNC ?? "") === "Critique" },
+    { label: "Majeur", predicate: (d) => (d.typeNC ?? "") === "Majeur" },
+    { label: "Mineur", predicate: (d) => (d.typeNC ?? "") === "Mineur" },
+  ];
+
   if (loading) return <p className="p-4 text-slate-500">Chargement…</p>;
 
   return (
     <div>
       <h2 className="text-lg font-semibold mb-3">Non-conformités fournisseur ({rows.length})</h2>
-      <EditableTable columns={columns} rows={rows} onUpdate={update} onDelete={remove} onAdd={add} />
+      <EditableTable
+        columns={columns}
+        rows={rows}
+        onUpdate={update}
+        onDelete={remove}
+        onAdd={add}
+        searchFields={["fournisseur", "nom", "chant", "ctx", "rem"]}
+        quickFilters={quickFilters}
+      />
     </div>
   );
 }

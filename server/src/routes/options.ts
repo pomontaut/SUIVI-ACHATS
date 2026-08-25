@@ -22,6 +22,8 @@ const OPTIONS = {
   NC_STATUTS: seedData.NC_STATUTS,
   AO_STATUT_OPTS: seedData.AO_STATUT_OPTS,
   TD_STATUTS: seedData.TD_STATUTS,
+  PERT_CATS: seedData.PERT_CATS,
+  TRANCHES: seedData.TRANCHES,
 };
 
 export const optionsRouter = Router();

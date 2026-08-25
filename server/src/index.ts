@@ -7,7 +7,6 @@ import { prisma } from "./lib/prisma.js";
 import { crudRouter } from "./routes/crud.js";
 import { optionsRouter } from "./routes/options.js";
 import { fournisseursRouter } from "./routes/fournisseurs.js";
-import { dashboardRouter } from "./routes/dashboard.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -25,7 +24,6 @@ app.use("/api/livraisons", crudRouter(prisma.livraison));
 app.use("/api/appels-offres", crudRouter(prisma.appelOffre));
 app.use("/api/fournisseurs", fournisseursRouter);
 app.use("/api/options", optionsRouter);
-app.use("/api/dashboard", dashboardRouter);
 
 // En production, l'API sert aussi les fichiers statiques du client buildé
 // (un seul service à déployer, cf. client/dist copié à côté de ce fichier).

@@ -1,7 +1,20 @@
-import { EditableTable, type ColumnDef } from "../components/EditableTable";
+import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import type { Transverse } from "../types";
+
+function isClosTr(d: Transverse): boolean {
+  const prec = (d.prec ?? "").toLowerCase();
+  const action = (d.action ?? "").toLowerCase();
+  const statut = d.statut ?? "Actif";
+  return statut === "Clôturé" || prec.includes("cloturé") || prec.includes("clôturé") || action.includes("cloturé") || action.includes("clôturé");
+}
+function isAttTr(d: Transverse): boolean {
+  const prec = (d.prec ?? "").toLowerCase();
+  const action = (d.action ?? "").toLowerCase();
+  const rem = (d.rem ?? "").toLowerCase();
+  return prec.includes("attente") || action.includes("attente") || rem.includes("attente");
+}
 
 export function TransversePage() {
   const opts = useOptions();
@@ -27,12 +40,28 @@ export function TransversePage() {
     { key: "retour", label: "Date retour", type: "date", width: "88px" },
   ];
 
+  const quickFilters: QuickFilter<Transverse>[] = [
+    { label: "Actif", predicate: (d) => !isClosTr(d) },
+    { label: "Clôturé", predicate: isClosTr },
+    { label: "En attente", predicate: (d) => isAttTr(d) && !isClosTr(d) },
+    { label: "Mgt Achat", predicate: (d) => (d.type ?? "") === "Mgt Achat" },
+    { label: "Projet IT", predicate: (d) => (d.type ?? "") === "Projet IT" },
+  ];
+
   if (loading) return <p className="p-4 text-slate-500">Chargement…</p>;
 
   return (
     <div>
       <h2 className="text-lg font-semibold mb-3">Sujets transverses ({rows.length})</h2>
-      <EditableTable columns={columns} rows={rows} onUpdate={update} onDelete={remove} onAdd={add} />
+      <EditableTable
+        columns={columns}
+        rows={rows}
+        onUpdate={update}
+        onDelete={remove}
+        onAdd={add}
+        searchFields={["nom", "dem", "prec", "action"]}
+        quickFilters={quickFilters}
+      />
     </div>
   );
 }
