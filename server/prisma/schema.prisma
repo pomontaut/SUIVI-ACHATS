@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Suivi opérationnel des achats (une ligne = un besoin d'achat sur un chantier)
+model Operation {
+  id                  String   @id @default(cuid())
+  date                String? // dd/mm/yy saisi par l'utilisateur
+  dem                 String? // demandeur
+  ent                 String? // entité
+  chant               String? // n° chantier
+  nom                 String? // nom du chantier
+  type                String? // exploitation / soumission / ...
+  impl                String? // implantation oui/non
+  fourn               String? // catégorie de fournitures
+  prec                String? // précisions du besoin
+  etape               String? // étape du process achat
+  consult             String? // JSON array de dates/consultations
+  rem                 String? // remarques
+  launch              String?
+  retour              String?
+  retourMax           String?
+  dateCmd             String?
+  dateLivraison       String?
+  dateLivraisonReelle String?
+  numCmd              String?
+  budget              String?
+  typeBudget          String?
+  montant             String?
+  gain                String?
+  tco                 String?
+  fournisseur         String?
+  typeActionAchat     String?
+  comment             String?
+  statutAo            String?
+  prio                String?  @default("P2")
+  vu                  Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// Sujets transverses (management achats, projets IT, etc.), non liés à un chantier précis
+model Transverse {
+  id        String   @id @default(cuid())
+  date      String?
+  dem       String?
+  ent       String?
+  nom       String?
+  type      String?
+  prec      String?
+  budget    String?
+  rem       String?
+  action    String?
+  retour    String?
+  prio      String?  @default("P2")
+  statut    String?  @default("Actif")
+  vu        Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Liste de tâches (to-do) de l'équipe achats
+model Todo {
+  id             String   @id @default(cuid())
+  prio           String?  @default("P2")
+  statut         String?  @default("Actif")
+  qui            String?
+  quoi           String?
+  deadline       String?
+  action         String?
+  deadlineAction String?
+  vu             Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Non-conformités fournisseur (qualité, retard, quantité...)
+model NonConformite {
+  id          String   @id @default(cuid())
+  date        String?
+  fournisseur String?
+  ent         String?
+  chant       String?
+  nom         String?
+  ctx         String? // contact / interlocuteur
+  montantCmd  String?
+  catNC       String? // catégorie (retard livraison, qualité, ...)
+  typeNC      String? // gravité: mineur/majeur/critique
+  statut      String? // statut de traitement de la NC
+  statutNC    String? @default("En cours") // en cours / clôturé (simple)
+  montantNC   String?
+  noteCredit  String?
+  rem         String?
+  livraisonId String? // rattachement optionnel à une livraison en retard
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Suivi des livraisons (délais, retards, statuts de réception)
+model Livraison {
+  id                  String   @id @default(cuid())
+  chant               String?
+  nom                 String?
+  numCmd              String?
+  ent                 String?
+  dem                 String?
+  fournisseur         String?
+  prec                String?
+  montant             String?
+  dateCmd             String?
+  dateConfirm         String?
+  dateLivraison       String? // prévue
+  dateLivraisonReelle String?
+  remLiv              String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// Suivi des appels d'offres / soumissions envoyées aux fournisseurs
+model AppelOffre {
+  id          String   @id @default(cuid())
+  date        String?
+  chant       String?
+  nom         String?
+  ent         String?
+  dem         String?
+  fournisseur String?
+  prec        String?
+  statut      String?  @default("En cours")
+  dateEnvoi   String?
+  dateRetour  String?
+  rem         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Référentiel fournisseurs (import Abacus / ERP)
+model Fournisseur {
+  id  String @id @default(cuid())
+  nom String @unique
+}
