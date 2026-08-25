@@ -25,9 +25,11 @@ import {
   prochainesLivraisons,
   dashLivraisons,
   tauxService,
+  top10Priorites,
   tranchesBreakdown,
   type DashLivStatus,
 } from "../lib/dashboard";
+import { PrioBadge } from "../components/PrioBadge";
 import type { Operation, Todo, Transverse, Livraison } from "../types";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
@@ -85,9 +87,11 @@ function DashboardContent({
   const prochLiv = useMemo(() => prochainesLivraisons(operations), [operations]);
   const ts = useMemo(() => tauxService(livraisons), [livraisons]);
   const depF = useMemo(() => depFourn(operations), [operations]);
+  const top10 = useMemo(() => top10Priorites(operations, transverses, todos), [operations, transverses, todos]);
 
   return (
     <div className="space-y-6">
+      <Top10Priorites items={top10} />
       <KpiRow k={k} />
       <BilanPeriode operations={operations} transverses={transverses} todos={todos} />
 
@@ -548,6 +552,45 @@ function prioBorder(prio: string | null): string {
 function prioBadge(prio: string | null): string {
   const m: Record<string, string> = { P0: "bg-red-100 text-red-800", P1: "bg-amber-100 text-amber-800", P2: "bg-blue-100 text-blue-800", P3: "bg-slate-100 text-slate-600", P4: "bg-slate-100 text-slate-500" };
   return m[prio ?? ""] ?? "bg-slate-100 text-slate-500";
+}
+
+function Top10Priorites({ items }: { items: import("../lib/dashboard").TopPrioItem[] }) {
+  return (
+    <Card title="Mes 10 priorités à traiter" subtitle="Tous onglets confondus, Opérationnel en tête">
+      {items.length === 0 ? (
+        <EmptyLine text="Aucun sujet actif à traiter." />
+      ) : (
+        <div className="overflow-auto">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="text-left text-[10px] uppercase text-slate-400">
+                <th className="py-1.5 pr-2 w-10">#</th>
+                <th className="py-1.5 pr-2">Priorité</th>
+                <th className="py-1.5 pr-2">Origine</th>
+                <th className="py-1.5 pr-2">Sujet</th>
+                <th className="py-1.5 pr-2">Quoi</th>
+                <th className="py-1.5 pr-2">Entité</th>
+                <th className="py-1.5">Échéance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((it, i) => (
+                <tr key={`${it.origine}-${it.id}`} className="border-t border-slate-100">
+                  <td className="py-1.5 pr-2 text-slate-400 font-medium">{i + 1}</td>
+                  <td className="py-1.5 pr-2"><PrioBadge prio={it.prio} warning={it.warning} /></td>
+                  <td className="py-1.5 pr-2"><Badge color={it.origine === "Opérationnel" ? "#185FA5" : it.origine === "Transverse" ? "#534AB7" : "#854F0B"}>{it.origine}</Badge></td>
+                  <td className="py-1.5 pr-2 font-medium">{it.sujet}</td>
+                  <td className="py-1.5 pr-2 text-slate-500">{it.quoi}</td>
+                  <td className="py-1.5 pr-2">{it.ent}</td>
+                  <td className="py-1.5">{it.echeance || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
 }
 
 function KpiRow({ k }: { k: ReturnType<typeof kpis> }) {

@@ -1,9 +1,16 @@
 import { useState } from "react";
 import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
+import { PrioBadge } from "../components/PrioBadge";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import { isAtt, isClos } from "../lib/etape";
+import { isAutoPrioType, operationNeedsWarning, operationPrio, prioRank } from "../lib/priority";
 import type { Operation } from "../types";
+
+const PRIO_ROW_BORDER: Record<string, string> = {
+  P0: "border-l-4 !border-l-red-400",
+  P1: "border-l-4 !border-l-amber-400",
+};
 
 export function OperationsPage() {
   const opts = useOptions();
@@ -17,7 +24,24 @@ export function OperationsPage() {
   });
 
   const columns: ColumnDef<Operation>[] = [
-    { key: "prio", label: "Priorité", type: "select", options: opts.PRIOS, width: "70px" },
+    {
+      key: "prio",
+      label: "Priorité",
+      width: "90px",
+      // Calculée automatiquement (échéance retourMax pour l'exploitation,
+      // retour pour la soumission / Suivi SLA) : lecture seule pour ces
+      // types, éditable manuellement pour les autres (ex. Devis PV).
+      render: (o) =>
+        isAutoPrioType(o.type) ? (
+          <PrioBadge prio={operationPrio(o)} warning={operationNeedsWarning(o)} />
+        ) : (
+          <select className="input" value={o.prio ?? ""} onChange={(e) => update(o.id, { prio: e.target.value })}>
+            <option value=""></option>
+            {opts.PRIOS.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        ),
+      filterValue: (o) => operationPrio(o),
+    },
     { key: "date", label: "Date", type: "date", width: "80px" },
     { key: "dem", label: "Demandeur", width: "110px" },
     { key: "ent", label: "Entité", type: "select", options: opts.ENTITES, width: "80px" },
@@ -49,6 +73,7 @@ export function OperationsPage() {
   // qui peut se combiner à n'importe quel filtre rapide.
   const withHide = (pred: (o: Operation) => boolean) => (o: Operation) => (!hideClosed || !isClos(o.etape)) && pred(o);
   const quickFilters: QuickFilter<Operation>[] = [
+    { label: "Urgent (P0/P1)", predicate: withHide((o) => prioRank(operationPrio(o)) <= 1 && !isClos(o.etape)) },
     { label: "Actif", predicate: withHide((o) => !isClos(o.etape)) },
     { label: "Clôturé", predicate: withHide((o) => isClos(o.etape)) },
     { label: "En attente", predicate: withHide((o) => isAtt(o.etape)) },
@@ -72,6 +97,7 @@ export function OperationsPage() {
         searchFields={["nom", "dem", "chant", "fourn", "fournisseur", "prec"]}
         quickFilters={quickFilters}
         extraToggle={{ label: "Masquer clôturés", active: hideClosed, onToggle: () => setHideClosed((h) => !h) }}
+        rowClassName={(o) => (isClos(o.etape) ? "" : (PRIO_ROW_BORDER[operationPrio(o)] ?? ""))}
       />
     </div>
   );
