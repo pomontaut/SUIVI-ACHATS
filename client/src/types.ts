@@ -34,7 +34,7 @@ export interface Operation extends Base {
   comment: string | null;
   statutAo: string | null;
   prio: string | null;
-  vu: boolean;
+  vuDate: string | null;
 }
 
 export interface Transverse extends Base {
@@ -50,7 +50,7 @@ export interface Transverse extends Base {
   retour: string | null;
   prio: string | null;
   statut: string | null;
-  vu: boolean;
+  vuDate: string | null;
 }
 
 export interface Todo extends Base {
@@ -61,7 +61,7 @@ export interface Todo extends Base {
   deadline: string | null;
   action: string | null;
   deadlineAction: string | null;
-  vu: boolean;
+  vuDate: string | null;
 }
 
 export interface NonConformite extends Base {

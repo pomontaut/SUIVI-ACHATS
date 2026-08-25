@@ -42,7 +42,7 @@ model Operation {
   comment             String?
   statutAo            String?
   prio                String?  @default("P2")
-  vu                  Boolean  @default(false)
+  vuDate              String?  // date (YYYY-MM-DD) du dernier "vu" ; case cochée seulement si === aujourd'hui
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
@@ -62,7 +62,7 @@ model Transverse {
   retour    String?
   prio      String?  @default("P2")
   statut    String?  @default("Actif")
-  vu        Boolean  @default(false)
+  vuDate    String?  // date (YYYY-MM-DD) du dernier "vu" ; case cochée seulement si === aujourd'hui
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -77,7 +77,7 @@ model Todo {
   deadline       String?
   action         String?
   deadlineAction String?
-  vu             Boolean  @default(false)
+  vuDate         String?  // date (YYYY-MM-DD) du dernier "vu" ; case cochée seulement si === aujourd'hui
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "./api";
 import { OptionsContext } from "./hooks/useOptions";
 import type { Options } from "./types";
-import { DashboardPage } from "./pages/DashboardPage";
+import { SuiviDashboardPage } from "./pages/SuiviDashboardPage";
+import { KpiDashboardPage } from "./pages/KpiDashboardPage";
 import { OperationsPage } from "./pages/OperationsPage";
 import { TransversePage } from "./pages/TransversePage";
 import { TodoPage } from "./pages/TodoPage";
@@ -11,7 +12,8 @@ import { LivraisonsPage } from "./pages/LivraisonsPage";
 import { AppelsOffresPage } from "./pages/AppelsOffresPage";
 
 const TABS = [
-  { id: "dashboard", label: "Tableau de bord" },
+  { id: "suivi-dashboard", label: "Tableau de bord de suivi" },
+  { id: "kpi-dashboard", label: "Tableau de bord – KPI" },
   { id: "operations", label: "Opérationnel" },
   { id: "transverse", label: "Transverse" },
   { id: "todo", label: "To-do" },
@@ -23,7 +25,7 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 export default function App() {
-  const [tab, setTab] = useState<TabId>("dashboard");
+  const [tab, setTab] = useState<TabId>("suivi-dashboard");
   const [options, setOptions] = useState<Options | null>(null);
 
   useEffect(() => {
@@ -58,7 +60,8 @@ export default function App() {
           <p className="text-slate-500">Chargement…</p>
         ) : (
           <OptionsContext.Provider value={options}>
-            {tab === "dashboard" && <DashboardPage />}
+            {tab === "suivi-dashboard" && <SuiviDashboardPage />}
+            {tab === "kpi-dashboard" && <KpiDashboardPage />}
             {tab === "operations" && <OperationsPage />}
             {tab === "transverse" && <TransversePage />}
             {tab === "todo" && <TodoPage />}
