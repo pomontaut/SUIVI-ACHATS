@@ -11,6 +11,7 @@ import { chantiersRouter } from "./routes/chantiers.js";
 import { diagnosticRouter } from "./routes/diagnostic.js";
 import { offreFichierRouter } from "./routes/offreFichier.js";
 import { aoSujetsRouter } from "./routes/aoSujets.js";
+import { fichierRouter } from "./lib/fichierRoutes.js";
 import { syncLivraisonsFromOperations } from "./lib/syncLivraisons.js";
 import { syncAppelsOffresFromOperations } from "./lib/syncAppelsOffres.js";
 import { syncSuiviAdministratifFromOperations } from "./lib/syncSuiviAdministratif.js";
@@ -32,6 +33,18 @@ app.use("/api/livraisons", crudRouter(prisma.livraison, { beforeList: syncLivrai
 app.use("/api/appels-offres", offreFichierRouter);
 app.use("/api/appels-offres", crudRouter(prisma.appelOffre, { beforeList: syncAppelsOffresFromOperations }));
 app.use("/api/ao-sujets", aoSujetsRouter);
+app.use("/api/suivi-administratif", fichierRouter(prisma.suiviAdministratif, {
+  routeSuffix: "/confirmation-fichier",
+  nomField: "confirmationFichierNom",
+  urlField: "confirmationFichierUrl",
+  dossier: "suivi-administratif/confirmation",
+}));
+app.use("/api/suivi-administratif", fichierRouter(prisma.suiviAdministratif, {
+  routeSuffix: "/bl-fichier",
+  nomField: "blFichierNom",
+  urlField: "blFichierUrl",
+  dossier: "suivi-administratif/bl",
+}));
 app.use("/api/suivi-administratif", crudRouter(prisma.suiviAdministratif, { beforeList: syncSuiviAdministratifFromOperations }));
 app.use("/api/fournisseurs", fournisseursRouter);
 app.use("/api/chantiers", chantiersRouter);

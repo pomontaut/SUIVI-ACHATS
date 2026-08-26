@@ -21,7 +21,7 @@ const OPTIONS = {
   NC_TYPOLOGIES: seedData.NC_TYPOLOGIES,
   NC_STATUTS: seedData.NC_STATUTS,
   AO_STATUT_OPTS: seedData.AO_STATUT_OPTS,
-  AO_VALIDATION_OPTS: ["Adjudicataire", "Pas répondu", "Non retenu"],
+  AO_VALIDATION_OPTS: ["Adjudicataire", "Pas répondu", "Non retenu", "Ne veut pas soumettre offre"],
   AO_STATUT_COMMANDE_OPTS: ["En cours", "Commandé", "Annulé"],
   TD_STATUTS: seedData.TD_STATUTS,
   PERT_CATS: seedData.PERT_CATS,

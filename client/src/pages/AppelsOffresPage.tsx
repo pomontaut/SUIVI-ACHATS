@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChantierPicker } from "../components/ChantierPicker";
 import { FournisseurPicker } from "../components/FournisseurPicker";
-import { OffreFichierControl } from "../components/OffreFichierControl";
+import { FichierControl } from "../components/FichierControl";
 import { Modal } from "../components/Modal";
 import { EmptyLine } from "../components/dashboardUi";
 import { useResource } from "../hooks/useResource";
@@ -314,8 +314,20 @@ function AoGroupCard({
                 </td>
                 <td className="py-1.5 px-2 text-right">
                   <div className="flex flex-col items-end gap-1">
-                    <input className="input w-24 text-right" defaultValue={r.offreFournisseur ?? ""} onBlur={(e) => { if (e.target.value !== (r.offreFournisseur ?? "")) onUpdateRow(r.id, { offreFournisseur: e.target.value }); }} />
-                    <OffreFichierControl row={r} onUpdated={onFileChanged} />
+                    <input
+                      className="input w-24 text-right"
+                      defaultValue={r.offreFournisseur ?? ""}
+                      title={r.offreMontantAuto ? `Montant extrait automatiquement du fichier joint — à vérifier${r.offreExtractionNote ? " : " + r.offreExtractionNote : ""}` : undefined}
+                      onBlur={(e) => { if (e.target.value !== (r.offreFournisseur ?? "")) onUpdateRow(r.id, { offreFournisseur: e.target.value, offreMontantAuto: false }); }}
+                    />
+                    {r.offreMontantAuto && <span className="text-[9px] text-amber-600" title={r.offreExtractionNote ?? ""}>🤖 à vérifier</span>}
+                    <FichierControl
+                      nom={r.offreFichierNom}
+                      url={r.offreFichierUrl}
+                      label="Joindre l'offre"
+                      onUpload={(f) => api.uploadOffreFichier(r.id, f).then(onFileChanged)}
+                      onRemove={() => api.removeOffreFichier(r.id).then(onFileChanged)}
+                    />
                   </div>
                 </td>
                 <td className="py-1.5 px-2">
@@ -466,14 +478,24 @@ function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGrou
                       className="input w-28 text-right"
                       defaultValue={row.offreFournisseur ?? ""}
                       placeholder="—"
-                      onBlur={(e) => { if (e.target.value !== (row.offreFournisseur ?? "")) onUpdate(row.id, { offreFournisseur: e.target.value }); }}
+                      title={row.offreMontantAuto ? "Montant extrait automatiquement du fichier joint — à vérifier" : undefined}
+                      onBlur={(e) => { if (e.target.value !== (row.offreFournisseur ?? "")) onUpdate(row.id, { offreFournisseur: e.target.value, offreMontantAuto: false }); }}
                     />
+                    {row.offreMontantAuto && <div className="text-[9px] text-amber-600 text-right">🤖 à vérifier</div>}
                   </td>
                   <td className="py-1.5 pr-2 text-right text-slate-500">
                     {!Number.isNaN(montant) && cheapest !== undefined && montant > cheapest ? `+CHF ${chf(montant - cheapest)}` : "—"}
                   </td>
                   <td className="py-1.5 pr-2">{row.statut || "—"}</td>
-                  <td className="py-1.5"><OffreFichierControl row={row} onUpdated={onFileChanged} /></td>
+                  <td className="py-1.5">
+                    <FichierControl
+                      nom={row.offreFichierNom}
+                      url={row.offreFichierUrl}
+                      label="Joindre l'offre"
+                      onUpload={(f) => api.uploadOffreFichier(row.id, f).then(onFileChanged)}
+                      onRemove={() => api.removeOffreFichier(row.id).then(onFileChanged)}
+                    />
+                  </td>
                 </tr>
               );
             })}

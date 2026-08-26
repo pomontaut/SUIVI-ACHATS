@@ -20,6 +20,18 @@ export function makeResource<T extends { id: string }>(name: string) {
   };
 }
 
+async function uploadFichier<T>(path: string, file: File): Promise<T> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${BASE}${path}`, { method: "POST", body: formData });
+  if (!res.ok) throw new Error(`upload ${path} -> ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+function removeFichier<T>(path: string): Promise<T> {
+  return request<T>(path, { method: "DELETE" });
+}
+
 export const api = {
   options: () => request<import("./types").Options>("/options"),
   fournisseurs: (q: string) =>
@@ -31,15 +43,18 @@ export const api = {
     request<import("./types").Chantier[]>(`/chantiers?q=${encodeURIComponent(q)}`),
   addChantier: (data: { numero: string; nom?: string | null; npa?: string | null; ville?: string | null }) =>
     request<import("./types").Chantier>("/chantiers", { method: "POST", body: JSON.stringify(data) }),
-  uploadOffreFichier: async (appelOffreId: string, file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch(`${BASE}/appels-offres/${appelOffreId}/offre-fichier`, { method: "POST", body: formData });
-    if (!res.ok) throw new Error(`upload -> ${res.status}`);
-    return res.json() as Promise<import("./types").AppelOffre>;
-  },
+  uploadOffreFichier: (appelOffreId: string, file: File) =>
+    uploadFichier<import("./types").AppelOffre>(`/appels-offres/${appelOffreId}/offre-fichier`, file),
   removeOffreFichier: (appelOffreId: string) =>
-    request<import("./types").AppelOffre>(`/appels-offres/${appelOffreId}/offre-fichier`, { method: "DELETE" }),
+    removeFichier<import("./types").AppelOffre>(`/appels-offres/${appelOffreId}/offre-fichier`),
+  uploadConfirmationFichier: (id: string, file: File) =>
+    uploadFichier<import("./types").SuiviAdministratif>(`/suivi-administratif/${id}/confirmation-fichier`, file),
+  removeConfirmationFichier: (id: string) =>
+    removeFichier<import("./types").SuiviAdministratif>(`/suivi-administratif/${id}/confirmation-fichier`),
+  uploadBlFichier: (id: string, file: File) =>
+    uploadFichier<import("./types").SuiviAdministratif>(`/suivi-administratif/${id}/bl-fichier`, file),
+  removeBlFichier: (id: string) =>
+    removeFichier<import("./types").SuiviAdministratif>(`/suivi-administratif/${id}/bl-fichier`),
   aoSujets: () => request<import("./types").AoSujet[]>("/ao-sujets"),
   updateAoSujet: (cle: string, data: { statutCommande?: string | null; numCmd?: string | null }) =>
     request<import("./types").AoSujet>(`/ao-sujets/${encodeURIComponent(cle)}`, { method: "PUT", body: JSON.stringify(data) }),
