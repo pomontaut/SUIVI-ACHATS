@@ -96,17 +96,25 @@ export function AppelsOffresPage() {
     setAoSujets((prev) => new Map(prev).set(cle, updated));
   }
 
-  const filteredRows = useMemo(() => {
-    let res = rows;
-    if (statutFilter) res = res.filter((r) => (r.statut ?? "En cours") === statutFilter);
-    if (search.trim()) {
-      const s = search.trim().toLowerCase();
-      res = res.filter((r) => [r.nom, r.chant, r.dem, r.fournisseur, r.prec].some((v) => (v ?? "").toLowerCase().includes(s)));
-    }
-    return res;
-  }, [rows, search, statutFilter]);
+  const searchedRows = useMemo(() => {
+    if (!search.trim()) return rows;
+    const s = search.trim().toLowerCase();
+    return rows.filter((r) => [r.nom, r.chant, r.dem, r.fournisseur, r.prec].some((v) => (v ?? "").toLowerCase().includes(s)));
+  }, [rows, search]);
 
-  const groups = useMemo(() => buildAoGroups(filteredRows), [filteredRows]);
+  const allGroups = useMemo(() => buildAoGroups(searchedRows), [searchedRows]);
+
+  // Le filtre rapide (Tous/En cours/Commandé/Annulé) porte sur le statut de
+  // commande du SUJET (celui affiché à côté de "Générer le TCO"), pas sur
+  // le statut individuel de chaque fournisseur consulté - un sujet Annulé
+  // ne doit pas réapparaître sous "En cours" même si une de ses lignes l'est.
+  const groups = useMemo(() => {
+    if (!statutFilter) return allGroups;
+    return allGroups.filter((g) => (aoSujets.get(g.key)?.statutCommande ?? "En cours") === statutFilter);
+  }, [allGroups, statutFilter, aoSujets]);
+
+  const filteredRowCount = useMemo(() => groups.reduce((n, g) => n + g.rows.length, 0), [groups]);
+
   const tcoGroup = groups.find((g) => g.key === tcoGroupKey) ?? null;
 
   function updateGroupFields(g: AoGroup, patch: Partial<AppelOffre>) {
@@ -136,7 +144,7 @@ export function AppelsOffresPage() {
           >
             Tous
           </button>
-          {opts.AO_STATUT_OPTS.filter(Boolean).map((s) => (
+          {opts.AO_STATUT_COMMANDE_OPTS.filter(Boolean).map((s) => (
             <button
               key={s}
               onClick={() => setStatutFilter(s)}
@@ -146,7 +154,7 @@ export function AppelsOffresPage() {
             </button>
           ))}
         </div>
-        <span className="text-xs text-slate-400 ml-auto">{groups.length} sujet(s) · {filteredRows.length} ligne(s)</span>
+        <span className="text-xs text-slate-400 ml-auto">{groups.length} sujet(s) · {filteredRowCount} ligne(s)</span>
       </div>
 
       {groups.length === 0 ? (
