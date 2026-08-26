@@ -110,6 +110,7 @@ export interface AppelOffre extends Base {
   prec: string | null;
   statut: string | null;
   dateEnvoi: string | null;
+  dateRetourMax: string | null;
   dateRetour: string | null;
   rem: string | null;
   offreFournisseur: string | null;

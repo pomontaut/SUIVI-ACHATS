@@ -53,7 +53,10 @@ export async function syncAppelsOffresFromOperations(): Promise<void> {
     const fournisseurs = parseConsult(o.consult);
     for (const fournisseur of fournisseurs) {
       qualifyingPairs.push({ operationId: o.id, fournisseur });
-      const mirror = { date: o.date, chant: o.chant, nom: o.nom, ent: o.ent, dem: o.dem, prec: o.prec };
+      const mirror = {
+        date: o.date, chant: o.chant, nom: o.nom, ent: o.ent, dem: o.dem, prec: o.prec,
+        dateEnvoi: o.launch, dateRetourMax: o.retourMax,
+      };
       const opKey = `${o.id}|${fournisseur}`;
       const existingAuto = byOpFournisseur.get(opKey);
       const contentK = contentKey(o.chant, o.nom, fournisseur);
@@ -83,7 +86,7 @@ export async function syncAppelsOffresFromOperations(): Promise<void> {
 
   for (const { keep, drop } of duplicatesToMerge) {
     const fillIn: Record<string, string> = {};
-    for (const field of ["statut", "dateEnvoi", "dateRetour", "offreFournisseur", "comparatifTechnique", "rem"] as const) {
+    for (const field of ["statut", "dateRetour", "offreFournisseur", "comparatifTechnique", "rem"] as const) {
       if (!keep[field] && drop[field]) fillIn[field] = drop[field] as string;
     }
     if (Object.keys(fillIn).length > 0) {
