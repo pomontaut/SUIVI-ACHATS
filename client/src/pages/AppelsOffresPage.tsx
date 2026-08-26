@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChantierPicker } from "../components/ChantierPicker";
 import { FournisseurPicker } from "../components/FournisseurPicker";
+import { OffreFichierControl } from "../components/OffreFichierControl";
 import { Modal } from "../components/Modal";
 import { EmptyLine } from "../components/dashboardUi";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import { dateVal } from "../lib/tableFilter";
-import type { AppelOffre } from "../types";
+import { api } from "../api";
+import type { AoSujet, AppelOffre } from "../types";
 
 const chf = (v: number) => new Intl.NumberFormat("fr-CH", { maximumFractionDigits: 0 }).format(v);
 
@@ -70,13 +72,29 @@ function buildAoGroups(rows: AppelOffre[]): AoGroup[] {
 
 export function AppelsOffresPage() {
   const opts = useOptions();
-  const { rows, add, update, remove, loading } = useResource<AppelOffre>("appels-offres", {
+  const { rows, add, update, remove, loading, reload } = useResource<AppelOffre>("appels-offres", {
     statut: "En cours",
     ent: opts.ENTITES[0] ?? "",
   });
   const [search, setSearch] = useState("");
   const [statutFilter, setStatutFilter] = useState<string | null>(null);
   const [tcoGroupKey, setTcoGroupKey] = useState<string | null>(null);
+  const [aoSujets, setAoSujets] = useState<Map<string, AoSujet>>(new Map());
+
+  useEffect(() => {
+    api.aoSujets().then((rows) => setAoSujets(new Map(rows.map((s) => [s.cle, s]))));
+  }, []);
+
+  async function updateAoSujet(cle: string, patch: { statutCommande?: string | null; numCmd?: string | null }) {
+    setAoSujets((prev) => {
+      const next = new Map(prev);
+      const existing = next.get(cle);
+      next.set(cle, { id: existing?.id ?? cle, cle, statutCommande: existing?.statutCommande ?? "En cours", numCmd: existing?.numCmd ?? null, ...patch });
+      return next;
+    });
+    const updated = await api.updateAoSujet(cle, patch);
+    setAoSujets((prev) => new Map(prev).set(cle, updated));
+  }
 
   const filteredRows = useMemo(() => {
     let res = rows;
@@ -141,11 +159,14 @@ export function AppelsOffresPage() {
               group={g}
               allGroups={groups}
               opts={opts}
+              sujet={aoSujets.get(g.key) ?? null}
+              onUpdateSujet={(patch) => updateAoSujet(g.key, patch)}
               onUpdateRow={update}
               onUpdateGroup={(patch) => updateGroupFields(g, patch)}
               onDeleteRow={remove}
               onAddRow={() => addRowToGroup(g)}
               onGenerateTco={() => setTcoGroupKey(g.key)}
+              onFileChanged={reload}
             />
           ))}
         </div>
@@ -158,7 +179,7 @@ export function AppelsOffresPage() {
         + Ajouter un nouvel appel d'offres
       </button>
 
-      {tcoGroup && <TcoModal groupe={tcoGroup} onUpdate={update} onClose={() => setTcoGroupKey(null)} />}
+      {tcoGroup && <TcoModal groupe={tcoGroup} onUpdate={update} onFileChanged={reload} onClose={() => setTcoGroupKey(null)} />}
     </div>
   );
 }
@@ -167,23 +188,30 @@ function AoGroupCard({
   group,
   allGroups,
   opts,
+  sujet,
+  onUpdateSujet,
   onUpdateRow,
   onUpdateGroup,
   onDeleteRow,
   onAddRow,
   onGenerateTco,
+  onFileChanged,
 }: {
   group: AoGroup;
   allGroups: AoGroup[];
   opts: ReturnType<typeof useOptions>;
+  sujet: AoSujet | null;
+  onUpdateSujet: (patch: { statutCommande?: string | null; numCmd?: string | null }) => void;
   onUpdateRow: (id: string, patch: Partial<AppelOffre>) => void;
   onUpdateGroup: (patch: Partial<AppelOffre>) => void;
   onDeleteRow: (id: string) => void;
   onAddRow: () => void;
   onGenerateTco: () => void;
+  onFileChanged: () => void;
 }) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [moveRowId, setMoveRowId] = useState<string | null>(null);
+  const statutCommande = sujet?.statutCommande ?? "En cours";
 
   return (
     <div className="rounded-lg border border-slate-300 bg-white shadow-sm overflow-hidden">
@@ -215,12 +243,29 @@ function AoGroupCard({
             />
           </div>
         )}
-        <button
-          className="ml-auto text-xs bg-indigo-600 text-white rounded px-2.5 py-1 hover:bg-indigo-700 whitespace-nowrap"
-          onClick={onGenerateTco}
-        >
-          Générer le TCO
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <select
+            className="input w-28"
+            value={statutCommande}
+            onChange={(e) => onUpdateSujet({ statutCommande: e.target.value })}
+          >
+            {opts.AO_STATUT_COMMANDE_OPTS.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          {statutCommande === "Commandé" && (
+            <input
+              className="input w-28"
+              placeholder="N° commande"
+              defaultValue={sujet?.numCmd ?? ""}
+              onBlur={(e) => { if (e.target.value !== (sujet?.numCmd ?? "")) onUpdateSujet({ numCmd: e.target.value }); }}
+            />
+          )}
+          <button
+            className="text-xs bg-indigo-600 text-white rounded px-2.5 py-1 hover:bg-indigo-700 whitespace-nowrap"
+            onClick={onGenerateTco}
+          >
+            Générer le TCO
+          </button>
+        </div>
       </div>
 
       <div className="overflow-auto">
@@ -234,6 +279,7 @@ function AoGroupCard({
               <th className="py-1.5 px-2">Date envoi</th>
               <th className="py-1.5 px-2">Date retour</th>
               <th className="py-1.5 px-2 text-right">Offre fournisseur (HT)</th>
+              <th className="py-1.5 px-2">Validation</th>
               <th className="py-1.5 px-2">Remarques</th>
               <th className="py-1.5 px-2 w-8" />
               <th className="py-1.5 px-2 w-8" />
@@ -267,7 +313,16 @@ function AoGroupCard({
                   <input className="input w-24" placeholder="jj/mm/aa" defaultValue={r.dateRetour ?? ""} onBlur={(e) => { if (e.target.value !== (r.dateRetour ?? "")) onUpdateRow(r.id, { dateRetour: e.target.value }); }} />
                 </td>
                 <td className="py-1.5 px-2 text-right">
-                  <input className="input w-24 text-right" defaultValue={r.offreFournisseur ?? ""} onBlur={(e) => { if (e.target.value !== (r.offreFournisseur ?? "")) onUpdateRow(r.id, { offreFournisseur: e.target.value }); }} />
+                  <div className="flex flex-col items-end gap-1">
+                    <input className="input w-24 text-right" defaultValue={r.offreFournisseur ?? ""} onBlur={(e) => { if (e.target.value !== (r.offreFournisseur ?? "")) onUpdateRow(r.id, { offreFournisseur: e.target.value }); }} />
+                    <OffreFichierControl row={r} onUpdated={onFileChanged} />
+                  </div>
+                </td>
+                <td className="py-1.5 px-2">
+                  <select className="input" value={r.validation ?? ""} onChange={(e) => onUpdateRow(r.id, { validation: e.target.value })}>
+                    <option value=""></option>
+                    {opts.AO_VALIDATION_OPTS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </td>
                 <td className="py-1.5 px-2">
                   <input className="input" defaultValue={r.rem ?? ""} onBlur={(e) => { if (e.target.value !== (r.rem ?? "")) onUpdateRow(r.id, { rem: e.target.value }); }} />
@@ -375,7 +430,7 @@ function MoveRowModal({
   );
 }
 
-function TcoModal({ groupe, onUpdate, onClose }: { groupe: AoGroup; onUpdate: (id: string, patch: Partial<AppelOffre>) => void; onClose: () => void }) {
+function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGroup; onUpdate: (id: string, patch: Partial<AppelOffre>) => void; onFileChanged: () => void; onClose: () => void }) {
   const offres = groupe.rows
     .map((r) => ({ row: r, montant: parseFloat(r.offreFournisseur ?? "") }))
     .sort((a, b) => {
@@ -396,7 +451,8 @@ function TcoModal({ groupe, onUpdate, onClose }: { groupe: AoGroup; onUpdate: (i
               <th className="py-1.5 pr-2">Fournisseur</th>
               <th className="py-1.5 pr-2 text-right">Offre HT (CHF)</th>
               <th className="py-1.5 pr-2 text-right">Écart vs moins cher</th>
-              <th className="py-1.5">Statut</th>
+              <th className="py-1.5 pr-2">Statut</th>
+              <th className="py-1.5">Document</th>
             </tr>
           </thead>
           <tbody>
@@ -416,7 +472,8 @@ function TcoModal({ groupe, onUpdate, onClose }: { groupe: AoGroup; onUpdate: (i
                   <td className="py-1.5 pr-2 text-right text-slate-500">
                     {!Number.isNaN(montant) && cheapest !== undefined && montant > cheapest ? `+CHF ${chf(montant - cheapest)}` : "—"}
                   </td>
-                  <td className="py-1.5">{row.statut || "—"}</td>
+                  <td className="py-1.5 pr-2">{row.statut || "—"}</td>
+                  <td className="py-1.5"><OffreFichierControl row={row} onUpdated={onFileChanged} /></td>
                 </tr>
               );
             })}

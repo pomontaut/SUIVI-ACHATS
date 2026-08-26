@@ -317,7 +317,7 @@ export function EditableTable<T extends { id: string }>({
         <div className="p-2 border-t border-slate-200">
           <button
             className="rounded bg-indigo-600 text-white text-sm px-3 py-1.5 hover:bg-indigo-700"
-            onClick={onAdd}
+            onClick={() => onAdd()}
           >
             {addLabel}
           </button>

@@ -78,6 +78,7 @@ export interface NonConformite extends Base {
   statutNC: string | null;
   montantNC: string | null;
   noteCredit: string | null;
+  noteCreditNum: string | null;
   rem: string | null;
 }
 
@@ -112,7 +113,33 @@ export interface AppelOffre extends Base {
   dateRetour: string | null;
   rem: string | null;
   offreFournisseur: string | null;
+  offreFichierNom: string | null;
+  offreFichierUrl: string | null;
   comparatifTechnique: string | null;
+  validation: string | null;
+}
+
+export interface AoSujet {
+  id: string;
+  cle: string;
+  statutCommande: string | null;
+  numCmd: string | null;
+}
+
+export interface SuiviAdministratif extends Base {
+  operationId: string | null;
+  date: string | null;
+  chant: string | null;
+  nom: string | null;
+  ent: string | null;
+  dem: string | null;
+  fournisseur: string | null;
+  prec: string | null;
+  fourn: string | null;
+  numCmd: string | null;
+  dateCmd: string | null;
+  confirmation: string | null;
+  bl: string | null;
 }
 
 export interface Fournisseur {
@@ -151,6 +178,8 @@ export interface Options {
   NC_TYPOLOGIES: string[];
   NC_STATUTS: string[];
   AO_STATUT_OPTS: string[];
+  AO_VALIDATION_OPTS: string[];
+  AO_STATUT_COMMANDE_OPTS: string[];
   TD_STATUTS: string[];
   PERT_CATS: { key: string; label: string; kw: string[] }[];
   TRANCHES: { lbl: string; min: number; max: number | null; col: string }[];

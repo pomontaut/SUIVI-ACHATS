@@ -10,6 +10,7 @@ import { TodoPage } from "./pages/TodoPage";
 import { NonConformitesPage } from "./pages/NonConformitesPage";
 import { LivraisonsPage } from "./pages/LivraisonsPage";
 import { AppelsOffresPage } from "./pages/AppelsOffresPage";
+import { SuiviAdministratifPage } from "./pages/SuiviAdministratifPage";
 import { DiagnosticPage } from "./pages/DiagnosticPage";
 
 const TABS = [
@@ -21,6 +22,7 @@ const TABS = [
   { id: "nc", label: "Non-conformités" },
   { id: "liv", label: "Livraisons" },
   { id: "ao", label: "Appels d'offres" },
+  { id: "suivi-admin", label: "Suivi Administratif" },
   { id: "diagnostic", label: "Diagnostic import" },
 ] as const;
 
@@ -70,6 +72,7 @@ export default function App() {
             {tab === "nc" && <NonConformitesPage />}
             {tab === "liv" && <LivraisonsPage />}
             {tab === "ao" && <AppelsOffresPage />}
+            {tab === "suivi-admin" && <SuiviAdministratifPage />}
             {tab === "diagnostic" && <DiagnosticPage />}
           </OptionsContext.Provider>
         )}
