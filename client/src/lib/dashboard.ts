@@ -2,7 +2,7 @@ import { dateVal } from "./tableFilter";
 import { isAtt, isClos } from "./etape";
 import { joursRetard, livraisonCategorie, parseFrDate, workingDaysBetween } from "./dates";
 import { isAutoPrioType, operationNeedsWarning, operationPrio, prioRank } from "./priority";
-import type { Livraison, Operation, Options, Todo, Transverse } from "../types";
+import type { Livraison, NonConformite, Operation, Options, Todo, Transverse } from "../types";
 
 function num(v: string | null | undefined): number {
   const n = parseFloat(String(v ?? ""));
@@ -120,12 +120,14 @@ const GAIN_CATS = ["Budget soumission", "Cost avoidance", "Budget meilleure offr
 export interface GainTypeResult {
   key: string;
   value: number;
+  count: number;
   pct: number;
   color: string;
 }
 
-export function gainByTypeBreakdown(operations: Operation[]): { rows: GainTypeResult[]; total: number } {
+export function gainByTypeBreakdown(operations: Operation[]): { rows: GainTypeResult[]; total: number; totalCount: number } {
   const byCat: Record<string, number> = Object.fromEntries(GAIN_CATS.map((c) => [c, 0]));
+  const countByCat: Record<string, number> = Object.fromEntries(GAIN_CATS.map((c) => [c, 0]));
   for (const o of operations) {
     const b = numOrNaN(o.budget);
     const m = numOrNaN(o.montant);
@@ -136,11 +138,20 @@ export function gainByTypeBreakdown(operations: Operation[]): { rows: GainTypeRe
     if (saving > 0) {
       const cat = GAIN_CATS.includes(o.typeBudget ?? "") ? (o.typeBudget as string) : "Autres";
       byCat[cat] += saving;
+      countByCat[cat] += 1;
     }
   }
   const total = Object.values(byCat).reduce((s, v) => s + v, 0);
-  const rows = GAIN_CATS.map((key, i) => ({ key, value: byCat[key], color: COL_GAIN[i], pct: total > 0 ? Math.round((byCat[key] / total) * 100) : 0 }));
-  return { rows, total };
+  const totalCount = Object.values(countByCat).reduce((s, v) => s + v, 0);
+  // pct calculé sur le nombre de commandes de la catégorie (nombre et %), pas sur le montant
+  const rows = GAIN_CATS.map((key, i) => ({
+    key,
+    value: byCat[key],
+    count: countByCat[key],
+    color: COL_GAIN[i],
+    pct: totalCount > 0 ? Math.round((countByCat[key] / totalCount) * 100) : 0,
+  }));
+  return { rows, total, totalCount };
 }
 
 const PRIO_ORDER: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3, P4: 4, "": 5 };
@@ -416,17 +427,24 @@ export function bilanPeriode(
 export interface TopPrioItem {
   id: string;
   origine: "Opérationnel" | "Transverse" | "To do";
+  type: string;
   prio: string;
   sujet: string;
   quoi: string;
   ent: string;
   echeance: string | null;
   warning: boolean;
+  vuDate: string | null;
+  isExploitation: boolean;
 }
 
-/** Les priorités Opérationnel sont toujours placées en tête (comme demandé) :
- * on ne trie pas la liste combinée par priorité globale, on complète plutôt
- * les 10 places avec Opérationnel d'abord, puis Transverse, puis To do. */
+/**
+ * Combine Opérationnel/Transverse/To do en une seule liste triée par
+ * urgence réelle : un sujet "sur le point de se terminer" (échéance
+ * dépassée ou à J-1, tous types confondus) passe toujours en premier ;
+ * sinon les sujets exploitation priment sur tout le reste ; à égalité, tri
+ * par priorité (P0 → P4).
+ */
 export function top10Priorites(operations: Operation[], transverses: Transverse[], todos: Todo[]): TopPrioItem[] {
   const opItems: TopPrioItem[] = operations
     .filter((o) => !isClos(o.etape))
@@ -435,43 +453,295 @@ export function top10Priorites(operations: Operation[], transverses: Transverse[
       return {
         id: o.id,
         origine: "Opérationnel" as const,
+        type: o.type || "—",
         prio: operationPrio(o),
         sujet: o.nom || o.chant || "—",
         quoi: o.prec || o.etape || "—",
         ent: o.ent || "—",
         echeance: kind === "exploitation" ? o.retourMax : kind === "sla" ? o.retour : null,
         warning: operationNeedsWarning(o),
+        vuDate: o.vuDate,
+        isExploitation: kind === "exploitation",
       };
-    })
-    .sort((a, b) => prioRank(a.prio) - prioRank(b.prio));
+    });
 
   const trItems: TopPrioItem[] = transverses
     .filter((t) => (t.statut ?? "Actif") !== "Clôturé")
     .map((t) => ({
       id: t.id,
       origine: "Transverse" as const,
+      type: t.type || "Transverse",
       prio: t.prio ?? "",
       sujet: t.nom || t.dem || "—",
       quoi: t.action || t.prec || "—",
       ent: t.ent || "—",
       echeance: t.retour,
-      warning: false,
-    }))
-    .sort((a, b) => prioRank(a.prio) - prioRank(b.prio));
+      warning: needsWarningForDeadline(t.retour),
+      vuDate: t.vuDate,
+      isExploitation: false,
+    }));
 
   const tdItems: TopPrioItem[] = todos
     .filter((d) => (d.statut ?? "Actif") !== "Clôturé")
     .map((d) => ({
       id: d.id,
       origine: "To do" as const,
+      type: "To do",
       prio: d.prio ?? "",
       sujet: d.qui || "—",
       quoi: d.quoi || d.action || "—",
       ent: "—",
       echeance: d.deadlineAction || d.deadline,
       warning: needsWarningForDeadline(d.deadlineAction || d.deadline),
-    }))
-    .sort((a, b) => prioRank(a.prio) - prioRank(b.prio));
+      vuDate: d.vuDate,
+      isExploitation: false,
+    }));
 
-  return [...opItems, ...trItems, ...tdItems].slice(0, 10);
+  const tier = (it: TopPrioItem) => (it.warning ? 0 : it.isExploitation ? 1 : 2);
+  const all = [...opItems, ...trItems, ...tdItems];
+  all.sort((a, b) => tier(a) - tier(b) || prioRank(a.prio) - prioRank(b.prio));
+
+  return all.slice(0, 10);
+}
+
+// ===== Ratio commandes < seuil vs reste =====
+
+export interface RatioSeuilResult {
+  seuil: number;
+  countBelow: number;
+  countAbove: number;
+  montantBelow: number;
+  montantAbove: number;
+  pctCountBelow: number;
+  pctMontantBelow: number;
+}
+
+export function ratioSeuil(operations: Operation[], seuil = 5000): RatioSeuilResult {
+  const rows = operations.filter((o) => num(o.montant) > 0);
+  let countBelow = 0, countAbove = 0, montantBelow = 0, montantAbove = 0;
+  for (const o of rows) {
+    const m = num(o.montant);
+    if (m < seuil) { countBelow++; montantBelow += m; } else { countAbove++; montantAbove += m; }
+  }
+  const totalCount = countBelow + countAbove;
+  const totalMontant = montantBelow + montantAbove;
+  return {
+    seuil, countBelow, countAbove, montantBelow, montantAbove,
+    pctCountBelow: totalCount > 0 ? Math.round((countBelow / totalCount) * 100) : 0,
+    pctMontantBelow: totalMontant > 0 ? Math.round((montantBelow / totalMontant) * 100) : 0,
+  };
+}
+
+export interface RatioSeuilMonthPoint {
+  monthKey: string;
+  label: string;
+  countBelow: number;
+  countAbove: number;
+  montantBelow: number;
+  montantAbove: number;
+  pctCountBelow: number;
+  pctMontantBelow: number;
+}
+
+/** Évolution sur N mois du ratio commandes < seuil vs reste, pour repérer une
+ * dérive de la dépense hors des sujets suivis (nombre et montant). */
+export function ratioSeuilEvolution(operations: Operation[], months = 6, seuil = 5000): RatioSeuilMonthPoint[] {
+  const now = new Date();
+  const keys: { key: string; label: string }[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleDateString("fr-CH", { month: "short", year: "2-digit" });
+    keys.push({ key, label });
+  }
+  return keys.map(({ key, label }) => {
+    const rows = operations.filter((o) => {
+      if (num(o.montant) <= 0) return false;
+      const d = parseFrDate(o.dateCmd) ?? parseFrDate(o.date);
+      return d ? monthKeyOf(d) === key : false;
+    });
+    let countBelow = 0, countAbove = 0, montantBelow = 0, montantAbove = 0;
+    for (const o of rows) {
+      const m = num(o.montant);
+      if (m < seuil) { countBelow++; montantBelow += m; } else { countAbove++; montantAbove += m; }
+    }
+    const totalCount = countBelow + countAbove;
+    const totalMontant = montantBelow + montantAbove;
+    return {
+      monthKey: key, label, countBelow, countAbove, montantBelow, montantAbove,
+      pctCountBelow: totalCount > 0 ? Math.round((countBelow / totalCount) * 100) : 0,
+      pctMontantBelow: totalMontant > 0 ? Math.round((montantBelow / totalMontant) * 100) : 0,
+    };
+  });
+}
+
+// ===== Analyse dépense fournisseur (chantier / marchandise / fournisseur) =====
+
+export interface DepBreakdownRow {
+  key: string;
+  total: number;
+  count: number;
+  pct: number;
+  color: string;
+}
+
+function groupByMontant(rows: Operation[], keyFn: (o: Operation) => string, colors = DEP_FOURN_COLORS): DepBreakdownRow[] {
+  const m = new Map<string, { total: number; count: number }>();
+  for (const o of rows) {
+    const k = keyFn(o) || "(inconnu)";
+    const e = m.get(k) ?? { total: 0, count: 0 };
+    e.total += num(o.montant);
+    e.count++;
+    m.set(k, e);
+  }
+  const sorted = [...m.entries()].sort((a, b) => b[1].total - a[1].total);
+  const total = sorted.reduce((s, [, v]) => s + v.total, 0);
+  return sorted.map(([key, v], i) => ({
+    key, total: v.total, count: v.count,
+    pct: total > 0 ? Math.round((v.total / total) * 100) : 0,
+    color: colors[i % colors.length],
+  }));
+}
+
+/** Bornes mois min/max des commandes présentes (pour initialiser un filtre
+ * de période sur toute la donnée disponible). */
+export function monthRangeOf(operations: Operation[]): { minKey: string; maxKey: string } {
+  const keys = operations
+    .map((o) => monthKeyOf(parseFrDate(o.dateCmd) ?? parseFrDate(o.date)))
+    .filter((k): k is string => Boolean(k));
+  const cur = monthKeyOf(new Date())!;
+  if (keys.length === 0) return { minKey: cur, maxKey: cur };
+  return { minKey: keys.reduce((a, b) => (a < b ? a : b)), maxKey: keys.reduce((a, b) => (a > b ? a : b)) };
+}
+
+export interface DepenseAnalysis {
+  byFournisseur: DepBreakdownRow[];
+  byChantier: DepBreakdownRow[];
+  byMarchandise: DepBreakdownRow[];
+  total: number;
+  count: number;
+}
+
+export function analyseDepense(operations: Operation[], fromKey: string, toKey: string): DepenseAnalysis {
+  const rows = operations.filter((o) => {
+    if (num(o.montant) <= 0) return false;
+    const d = parseFrDate(o.dateCmd) ?? parseFrDate(o.date);
+    const k = monthKeyOf(d);
+    return k !== null && k >= fromKey && k <= toKey;
+  });
+  const total = rows.reduce((s, o) => s + num(o.montant), 0);
+  return {
+    byFournisseur: groupByMontant(rows, (o) => (o.fournisseur ?? "").trim() || "(inconnu)"),
+    byChantier: groupByMontant(rows, (o) => o.nom || o.chant || "(inconnu)"),
+    byMarchandise: groupByMontant(rows, (o) => o.fourn || "Autres"),
+    total,
+    count: rows.length,
+  };
+}
+
+// ===== Analyse détaillée d'un fournisseur (drill-down) =====
+
+export interface FournisseurOrderRow {
+  numCmd: string;
+  chant: string;
+  nom: string;
+  montant: number;
+  dateCmd: string;
+  dateLivraison: string;
+}
+
+export interface FournisseurMonthPoint {
+  monthKey: string;
+  montant: number;
+  count: number;
+}
+
+export interface FournisseurDrilldown {
+  fournisseur: string;
+  totalMontant: number;
+  nombreCommandes: number;
+  orders: FournisseurOrderRow[];
+  byMonth: FournisseurMonthPoint[];
+  byChantier: DepBreakdownRow[];
+  byMarchandise: DepBreakdownRow[];
+  marchandiseByChantier: { chantier: string; rows: DepBreakdownRow[] }[];
+  tauxServiceMoyen: number | null;
+  ncCount: number;
+  ncCountMineur: number;
+  ncCountMajeur: number;
+  ncByTypologie: DepBreakdownRow[];
+  montantNcTotal: number;
+  montantNcRecupere: number;
+  pctRecuperation: number;
+  ncList: NonConformite[];
+}
+
+export function fournisseurDrilldown(
+  operations: Operation[],
+  livraisons: Livraison[],
+  nonConformites: NonConformite[],
+  fournisseur: string,
+): FournisseurDrilldown {
+  const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
+  const target = norm(fournisseur);
+
+  const ops = operations.filter((o) => norm(o.fournisseur) === target && num(o.montant) > 0);
+  const totalMontant = ops.reduce((s, o) => s + num(o.montant), 0);
+  const orders: FournisseurOrderRow[] = ops
+    .map((o) => ({ numCmd: o.numCmd || "—", chant: o.chant || "—", nom: o.nom || "—", montant: num(o.montant), dateCmd: o.dateCmd || "—", dateLivraison: o.dateLivraison || "—" }))
+    .sort((a, b) => dateVal(b.dateCmd) - dateVal(a.dateCmd));
+
+  const monthMap = new Map<string, { montant: number; count: number }>();
+  for (const o of ops) {
+    const d = parseFrDate(o.dateCmd) ?? parseFrDate(o.date);
+    const k = monthKeyOf(d);
+    if (!k) continue;
+    const e = monthMap.get(k) ?? { montant: 0, count: 0 };
+    e.montant += num(o.montant);
+    e.count++;
+    monthMap.set(k, e);
+  }
+  const byMonth = [...monthMap.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([monthKey, v]) => ({ monthKey, montant: v.montant, count: v.count }));
+
+  const byChantier = groupByMontant(ops, (o) => o.nom || o.chant || "(inconnu)");
+  const byMarchandise = groupByMontant(ops, (o) => o.fourn || "Autres");
+
+  const chantiers = [...new Set(ops.map((o) => o.nom || o.chant || "(inconnu)"))];
+  const marchandiseByChantier = chantiers.map((c) => ({
+    chantier: c,
+    rows: groupByMontant(ops.filter((o) => (o.nom || o.chant || "(inconnu)") === c), (o) => o.fourn || "Autres"),
+  }));
+
+  const livF = livraisons.filter((l) => norm(l.fournisseur) === target);
+  const ts = tauxService(livF);
+  const tauxServiceMoyen = ts.denom > 0 ? ts.ts : null;
+
+  const ncF = nonConformites.filter((n) => norm(n.fournisseur) === target);
+  const ncCountMineur = ncF.filter((n) => n.typeNC === "Mineur").length;
+  const ncCountMajeur = ncF.filter((n) => n.typeNC === "Majeur" || n.typeNC === "Critique").length;
+  const montantNcTotal = ncF.reduce((s, n) => s + num(n.montantNC), 0);
+  const montantNcRecupere = ncF.reduce((s, n) => s + num(n.noteCredit), 0);
+  const pctRecuperation = montantNcTotal > 0 ? Math.round((montantNcRecupere / montantNcTotal) * 100) : 0;
+
+  const ncTypMap = new Map<string, { total: number; count: number }>();
+  for (const n of ncF) {
+    const k = n.catNC || "Autre";
+    const e = ncTypMap.get(k) ?? { total: 0, count: 0 };
+    e.total += num(n.montantNC);
+    e.count++;
+    ncTypMap.set(k, e);
+  }
+  const ncSorted = [...ncTypMap.entries()].sort((a, b) => b[1].count - a[1].count);
+  const ncTotalCount = ncSorted.reduce((s, [, v]) => s + v.count, 0);
+  const ncByTypologie = ncSorted.map(([key, v], i) => ({
+    key, total: v.total, count: v.count,
+    pct: ncTotalCount > 0 ? Math.round((v.count / ncTotalCount) * 100) : 0,
+    color: DEP_FOURN_COLORS[i % DEP_FOURN_COLORS.length],
+  }));
+
+  return {
+    fournisseur, totalMontant, nombreCommandes: ops.length, orders, byMonth, byChantier, byMarchandise, marchandiseByChantier,
+    tauxServiceMoyen, ncCount: ncF.length, ncCountMineur, ncCountMajeur, ncByTypologie,
+    montantNcTotal, montantNcRecupere, pctRecuperation, ncList: ncF,
+  };
 }

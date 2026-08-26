@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
 import { PrioBadge } from "../components/PrioBadge";
+import { VuCheckbox } from "../components/VuCheckbox";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import { isAtt, isClos } from "../lib/etape";
@@ -34,11 +35,11 @@ export function OperationsPage() {
 
   const columns: ColumnDef<Operation>[] = [
     {
-      key: "vu",
+      key: "vuDate",
       label: "✓ Vu",
-      type: "bool",
       width: "40px",
       noFilter: true,
+      render: (o) => <VuCheckbox vuDate={o.vuDate} onChange={(v) => update(o.id, { vuDate: v })} />,
     },
     {
       key: "etape",
