@@ -31,4 +31,16 @@ export const api = {
     request<import("./types").Chantier[]>(`/chantiers?q=${encodeURIComponent(q)}`),
   addChantier: (data: { numero: string; nom?: string | null; npa?: string | null; ville?: string | null }) =>
     request<import("./types").Chantier>("/chantiers", { method: "POST", body: JSON.stringify(data) }),
+  uploadOffreFichier: async (appelOffreId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${BASE}/appels-offres/${appelOffreId}/offre-fichier`, { method: "POST", body: formData });
+    if (!res.ok) throw new Error(`upload -> ${res.status}`);
+    return res.json() as Promise<import("./types").AppelOffre>;
+  },
+  removeOffreFichier: (appelOffreId: string) =>
+    request<import("./types").AppelOffre>(`/appels-offres/${appelOffreId}/offre-fichier`, { method: "DELETE" }),
+  aoSujets: () => request<import("./types").AoSujet[]>("/ao-sujets"),
+  updateAoSujet: (cle: string, data: { statutCommande?: string | null; numCmd?: string | null }) =>
+    request<import("./types").AoSujet>(`/ao-sujets/${encodeURIComponent(cle)}`, { method: "PUT", body: JSON.stringify(data) }),
 };

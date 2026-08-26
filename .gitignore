@@ -5,4 +5,5 @@ dist
 tsconfig.tsbuildinfo
 server/prisma/dev.db
 server/prisma/dev.db-journal
+server/uploads
 .env

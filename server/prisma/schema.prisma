@@ -148,11 +148,52 @@ model AppelOffre {
   dateRetour          String?
   rem                 String?
   offreFournisseur    String? // montant de l'offre du fournisseur, en HT
+  offreFichierNom     String? // nom original du document d'offre joint (devis/PDF)
+  offreFichierUrl     String? // chemin de téléchargement du document d'offre joint
   comparatifTechnique String? // notes du comparatif technique de cette offre
+  validation          String? // adjudicataire / pas répondu / non retenu
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   @@unique([operationId, fournisseur])
+}
+
+// Statut de commande au niveau du "sujet AO" (regroupement virtuel de
+// plusieurs lignes AppelOffre par date+chantier+objet, cf.
+// AppelsOffresPage.tsx#buildAoGroups). Le sujet n'a pas d'existence propre
+// côté AppelOffre, donc ce statut est stocké séparément, indexé par la même
+// clé de regroupement que le client calcule.
+model AoSujet {
+  id             String   @id @default(cuid())
+  cle            String   @unique
+  statutCommande String?  @default("En cours")
+  numCmd         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Suivi administratif des commandes : reporté automatiquement depuis
+// l'Opérationnel dès qu'un n° de commande y est saisi (à partir du
+// 25/08/2026, pour ne pas réimporter en masse les anciennes valeurs
+// d'espace réservé type "x" laissées par la reprise de données). Confirme
+// et BL sont saisis manuellement ici.
+model SuiviAdministratif {
+  id           String   @id @default(cuid())
+  operationId  String?  @unique
+  date         String?
+  chant        String?
+  nom          String?
+  ent          String?
+  dem          String?
+  fournisseur  String?
+  prec         String?
+  fourn        String? // catégorie de fournitures (miroir Operation.fourn), pour savoir si le BL est applicable
+  numCmd       String?
+  dateCmd      String?
+  confirmation String?
+  bl           String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // Référentiel fournisseurs (import Abacus / ERP + ajouts manuels)
