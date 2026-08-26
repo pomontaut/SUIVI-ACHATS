@@ -41,6 +41,7 @@ export function NonConformitesPage() {
     { key: "montantNC", label: "Montant estimé NC", type: "num", width: "105px" },
     { key: "statut", label: "Statut détaillé", type: "select", options: opts.NC_STATUTS, width: "170px" },
     { key: "noteCredit", label: "Note crédit CHF", type: "num", width: "105px" },
+    { key: "noteCreditNum", label: "N° note de crédit", width: "130px" },
     { key: "rem", label: "Remarques", width: "200px" },
   ];
 

@@ -78,6 +78,7 @@ export interface NonConformite extends Base {
   statutNC: string | null;
   montantNC: string | null;
   noteCredit: string | null;
+  noteCreditNum: string | null;
   rem: string | null;
 }
 

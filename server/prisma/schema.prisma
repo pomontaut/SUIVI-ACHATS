@@ -98,6 +98,7 @@ model NonConformite {
   statutNC    String? @default("En cours") // en cours / clôturé (simple)
   montantNC   String?
   noteCredit  String?
+  noteCreditNum String? // n° / référence de la note de crédit d'origine émise par le fournisseur
   rem         String?
   livraisonId String? // rattachement optionnel à une livraison en retard
   createdAt   DateTime @default(now())
