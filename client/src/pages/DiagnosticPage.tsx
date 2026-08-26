@@ -24,16 +24,25 @@ interface DiagResult {
   missingNc: MissingNc[];
   missingLiv: MissingLiv[];
 }
+interface FixReport {
+  nonConformites: { created: number; skipped: number; errors: string[] };
+  livraisons: { updated: number; skipped: number; notFound: number; errors: string[] };
+  appelsOffres: { created: number; skipped: number; errors: string[] };
+}
 
 export function DiagnosticPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DiagResult | null>(null);
+  const [fixing, setFixing] = useState(false);
+  const [fixError, setFixError] = useState<string | null>(null);
+  const [fixReport, setFixReport] = useState<FixReport | null>(null);
 
   async function runDiagnostic() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setFixReport(null);
     try {
       const res = await fetch("/api/diagnostic/20260825");
       if (!res.ok) throw new Error(`${res.status}`);
@@ -42,6 +51,22 @@ export function DiagnosticPage() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function runFix() {
+    setFixing(true);
+    setFixError(null);
+    setFixReport(null);
+    try {
+      const res = await fetch("/api/diagnostic/20260825/fix", { method: "POST" });
+      if (!res.ok) throw new Error(`${res.status}`);
+      setFixReport(await res.json());
+      await runDiagnostic();
+    } catch (e) {
+      setFixError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setFixing(false);
     }
   }
 
@@ -57,6 +82,32 @@ export function DiagnosticPage() {
         </button>
         {error && <p className="text-sm text-red-700 mt-3">Erreur : {error}</p>}
       </Card>
+
+      {result && (result.missingNc.length > 0 || result.missingLiv.length > 0) && (
+        <Card title="Corriger automatiquement" subtitle="Ne crée que ce qui manque et ne remplit que les champs vides — n'écrase jamais une donnée déjà saisie.">
+          <button
+            className="px-4 py-2 rounded-lg bg-green-700 text-white text-sm font-medium hover:bg-green-800 disabled:opacity-50"
+            onClick={runFix}
+            disabled={fixing}
+          >
+            {fixing ? "Correction en cours…" : "Corriger automatiquement"}
+          </button>
+          {fixError && <p className="text-sm text-red-700 mt-3">Erreur : {fixError}</p>}
+          {fixReport && (
+            <div className="mt-4 space-y-2 text-sm">
+              <p>Non-conformités : <b>{fixReport.nonConformites.created}</b> créées, {fixReport.nonConformites.skipped} déjà présentes{fixReport.nonConformites.errors.length > 0 && <span className="text-red-700"> — {fixReport.nonConformites.errors.length} erreur(s)</span>}</p>
+              <p>Livraisons : <b>{fixReport.livraisons.updated}</b> complétées (dates/remarques), {fixReport.livraisons.skipped} déjà complètes, {fixReport.livraisons.notFound} sans ligne correspondante{fixReport.livraisons.errors.length > 0 && <span className="text-red-700"> — {fixReport.livraisons.errors.length} erreur(s)</span>}</p>
+              <p>Appels d'offres : <b>{fixReport.appelsOffres.created}</b> créés, {fixReport.appelsOffres.skipped} déjà présents{fixReport.appelsOffres.errors.length > 0 && <span className="text-red-700"> — {fixReport.appelsOffres.errors.length} erreur(s)</span>}</p>
+              {[...fixReport.nonConformites.errors, ...fixReport.livraisons.errors, ...fixReport.appelsOffres.errors].length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 text-xs text-red-800 space-y-1">
+                  {[...fixReport.nonConformites.errors, ...fixReport.livraisons.errors, ...fixReport.appelsOffres.errors].map((e, i) => <div key={i}>{e}</div>)}
+                </div>
+              )}
+              <p className="text-slate-500 italic">Le diagnostic ci-dessous a été relancé automatiquement.</p>
+            </div>
+          )}
+        </Card>
+      )}
 
       {result && (
         <>
