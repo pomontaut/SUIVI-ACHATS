@@ -115,6 +115,8 @@ export interface AppelOffre extends Base {
   offreFournisseur: string | null;
   offreFichierNom: string | null;
   offreFichierUrl: string | null;
+  offreMontantAuto: boolean;
+  offreExtractionNote: string | null;
   comparatifTechnique: string | null;
   validation: string | null;
 }
@@ -139,7 +141,11 @@ export interface SuiviAdministratif extends Base {
   numCmd: string | null;
   dateCmd: string | null;
   confirmation: string | null;
+  confirmationFichierNom: string | null;
+  confirmationFichierUrl: string | null;
   bl: string | null;
+  blFichierNom: string | null;
+  blFichierUrl: string | null;
 }
 
 export interface Fournisseur {

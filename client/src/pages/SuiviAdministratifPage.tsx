@@ -1,6 +1,8 @@
 import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
+import { FichierControl } from "../components/FichierControl";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
+import { api } from "../api";
 import type { SuiviAdministratif } from "../types";
 
 const BL_NON_APPLICABLE = ["agrégats", "déblais"];
@@ -38,7 +40,7 @@ function mirrorColumn(
 
 export function SuiviAdministratifPage() {
   const opts = useOptions();
-  const { rows, add, update, remove, loading } = useResource<SuiviAdministratif>("suivi-administratif", {
+  const { rows, add, update, remove, loading, reload } = useResource<SuiviAdministratif>("suivi-administratif", {
     ent: opts.ENTITES[0] ?? "",
   });
 
@@ -65,18 +67,47 @@ export function SuiviAdministratifPage() {
     mirrorColumn("prec", "Produit / Préc.", "140px", update),
     mirrorColumn("numCmd", "N° Commande", "90px", update),
     mirrorColumn("dateCmd", "Date cmd", "82px", update),
-    { key: "confirmation", label: "Confirmation", width: "160px" },
+    {
+      key: "confirmation",
+      label: "Confirmation",
+      width: "160px",
+      render: (r) => (
+        <div className="flex flex-col items-start gap-1">
+          <input
+            className="input"
+            defaultValue={r.confirmation ?? ""}
+            onBlur={(e) => { if (e.target.value !== (r.confirmation ?? "")) update(r.id, { confirmation: e.target.value }); }}
+          />
+          <FichierControl
+            nom={r.confirmationFichierNom}
+            url={r.confirmationFichierUrl}
+            label="Joindre la confirmation"
+            onUpload={(f) => api.uploadConfirmationFichier(r.id, f).then(reload)}
+            onRemove={() => api.removeConfirmationFichier(r.id).then(reload)}
+          />
+        </div>
+      ),
+    },
     {
       key: "bl",
       label: "BL",
       width: "160px",
       render: (r) =>
         blApplicable(r.fourn) ? (
-          <input
-            className="input"
-            defaultValue={r.bl ?? ""}
-            onBlur={(e) => { if (e.target.value !== (r.bl ?? "")) update(r.id, { bl: e.target.value }); }}
-          />
+          <div className="flex flex-col items-start gap-1">
+            <input
+              className="input"
+              defaultValue={r.bl ?? ""}
+              onBlur={(e) => { if (e.target.value !== (r.bl ?? "")) update(r.id, { bl: e.target.value }); }}
+            />
+            <FichierControl
+              nom={r.blFichierNom}
+              url={r.blFichierUrl}
+              label="Joindre le BL"
+              onUpload={(f) => api.uploadBlFichier(r.id, f).then(reload)}
+              onRemove={() => api.removeBlFichier(r.id).then(reload)}
+            />
+          </div>
         ) : (
           <span className="text-slate-400 italic text-[11px]">Non applicable</span>
         ),

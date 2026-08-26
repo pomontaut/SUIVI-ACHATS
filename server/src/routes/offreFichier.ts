@@ -5,6 +5,7 @@ import { rm } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "../lib/prisma.js";
 import { uploadsDir } from "../lib/uploads.js";
+import { extractOffreMontant } from "../lib/extractOffre.js";
 
 export const offreFichierRouter = Router();
 
@@ -28,15 +29,34 @@ offreFichierRouter.post("/:id/offre-fichier", upload.single("file"), async (req,
     return;
   }
   const previous = await prisma.appelOffre.findUnique({ where: { id: req.params.id } });
-  if (previous?.offreFichierUrl) {
+  const url = `/uploads/appels-offres/${req.params.id}/${encodeURIComponent(req.file.filename)}`;
+  // Si le nouveau fichier a le même nom que l'ancien, multer a déjà écrasé
+  // l'ancien fichier au même chemin en l'écrivant - ne pas le supprimer.
+  if (previous?.offreFichierUrl && previous.offreFichierUrl !== url) {
     const oldPath = path.join(uploadsDir(), previous.offreFichierUrl.replace(/^\/uploads\//, ""));
     await rm(oldPath, { force: true });
   }
-  const url = `/uploads/appels-offres/${req.params.id}/${encodeURIComponent(req.file.filename)}`;
-  const row = await prisma.appelOffre.update({
+  let row = await prisma.appelOffre.update({
     where: { id: req.params.id },
     data: { offreFichierNom: req.file.originalname, offreFichierUrl: url },
   });
+
+  // Extraction automatique du montant HT depuis le fichier joint - ne
+  // remplace jamais un montant saisi/confirmé manuellement par l'utilisateur.
+  if (!previous?.offreFournisseur || previous.offreMontantAuto) {
+    const extraction = await extractOffreMontant(req.file.path, req.file.originalname);
+    if (extraction && extraction.montantHT !== null) {
+      row = await prisma.appelOffre.update({
+        where: { id: req.params.id },
+        data: {
+          offreFournisseur: String(extraction.montantHT),
+          offreMontantAuto: true,
+          offreExtractionNote: extraction.commentaire,
+        },
+      });
+    }
+  }
+
   res.json(row);
 });
 

@@ -150,6 +150,8 @@ model AppelOffre {
   offreFournisseur    String? // montant de l'offre du fournisseur, en HT
   offreFichierNom     String? // nom original du document d'offre joint (devis/PDF)
   offreFichierUrl     String? // chemin de téléchargement du document d'offre joint
+  offreMontantAuto    Boolean  @default(false) // true si offreFournisseur a été extrait automatiquement du fichier joint (à vérifier), jamais écrasé une fois modifié à la main
+  offreExtractionNote String? // commentaire de l'extraction automatique (ambiguïtés, hypothèses)
   comparatifTechnique String? // notes du comparatif technique de cette offre
   validation          String? // adjudicataire / pas répondu / non retenu
   createdAt           DateTime @default(now())
@@ -191,7 +193,11 @@ model SuiviAdministratif {
   numCmd       String?
   dateCmd      String?
   confirmation String?
+  confirmationFichierNom String?
+  confirmationFichierUrl String?
   bl           String?
+  blFichierNom String?
+  blFichierUrl String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
