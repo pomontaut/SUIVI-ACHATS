@@ -10,6 +10,7 @@ import { TodoPage } from "./pages/TodoPage";
 import { NonConformitesPage } from "./pages/NonConformitesPage";
 import { LivraisonsPage } from "./pages/LivraisonsPage";
 import { AppelsOffresPage } from "./pages/AppelsOffresPage";
+import { DiagnosticPage } from "./pages/DiagnosticPage";
 
 const TABS = [
   { id: "suivi-dashboard", label: "Tableau de bord de suivi" },
@@ -20,6 +21,7 @@ const TABS = [
   { id: "nc", label: "Non-conformités" },
   { id: "liv", label: "Livraisons" },
   { id: "ao", label: "Appels d'offres" },
+  { id: "diagnostic", label: "Diagnostic import" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -68,6 +70,7 @@ export default function App() {
             {tab === "nc" && <NonConformitesPage />}
             {tab === "liv" && <LivraisonsPage />}
             {tab === "ao" && <AppelsOffresPage />}
+            {tab === "diagnostic" && <DiagnosticPage />}
           </OptionsContext.Provider>
         )}
       </main>
