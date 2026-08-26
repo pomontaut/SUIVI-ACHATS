@@ -37,6 +37,30 @@ import type { Livraison, NonConformite, Operation } from "../types";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, LineElement, PointElement, Tooltip, Legend);
 
+/** Plugin local (pas enregistré globalement) qui affiche la valeur en %
+ * directement au-dessus de chaque point, pour ne pas dépendre du survol
+ * de la souris pour lire les chiffres. */
+const pctPointLabels = {
+  id: "pctPointLabels",
+  afterDatasetsDraw(chart: ChartJS) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      meta.data.forEach((point, index) => {
+        const raw = dataset.data[index];
+        if (raw === null || raw === undefined) return;
+        ctx.save();
+        ctx.fillStyle = "#334155";
+        ctx.font = "600 10px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(`${raw}%`, point.x, point.y - 6);
+        ctx.restore();
+      });
+    });
+  },
+};
+
 const doughnutOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
 const barOpts = {
   responsive: true, maintainAspectRatio: false,
@@ -250,7 +274,7 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
       <div className="md:col-span-2">
         <Card title="Évolution du ratio sur 6 mois" subtitle="Pour repérer une dérive de la dépense hors sujets suivis">
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="h-48">
+            <div className="h-64">
               <p className="text-[10px] uppercase text-slate-400 mb-1">En nombre de commandes</p>
               <Line
                 data={{
@@ -259,10 +283,25 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
                     { label: `< ${chf(ratio.seuil)} CHF`, data: evolution.map((e) => e.pctCountBelow), borderColor: "#185FA5", backgroundColor: "#185FA5", tension: 0.3 },
                   ],
                 }}
-                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: (v) => `${v}%` } } } }}
+                plugins={[pctPointLabels]}
+                options={{
+                  responsive: true, maintainAspectRatio: false,
+                  layout: { padding: { top: 16 } },
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (ctx) => {
+                      const e = evolution[ctx.dataIndex];
+                      return `${e.pctCountBelow}% des commandes (${e.countBelow} sur ${e.countBelow + e.countAbove})`;
+                    } } },
+                  },
+                  scales: {
+                    x: { ticks: { autoSkip: false, maxRotation: 0, font: { size: 10 } } },
+                    y: { min: 0, max: 100, title: { display: true, text: "% du nombre de commandes" }, ticks: { callback: (v) => `${v}%` } },
+                  },
+                }}
               />
             </div>
-            <div className="h-48">
+            <div className="h-64">
               <p className="text-[10px] uppercase text-slate-400 mb-1">En montant</p>
               <Line
                 data={{
@@ -271,10 +310,28 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
                     { label: `< ${chf(ratio.seuil)} CHF`, data: evolution.map((e) => e.pctMontantBelow), borderColor: "#0F6E56", backgroundColor: "#0F6E56", tension: 0.3 },
                   ],
                 }}
-                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: (v) => `${v}%` } } } }}
+                plugins={[pctPointLabels]}
+                options={{
+                  responsive: true, maintainAspectRatio: false,
+                  layout: { padding: { top: 16 } },
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (ctx) => {
+                      const e = evolution[ctx.dataIndex];
+                      return `${e.pctMontantBelow}% de la dépense (CHF ${chf(e.montantBelow)} sur CHF ${chf(e.montantBelow + e.montantAbove)})`;
+                    } } },
+                  },
+                  scales: {
+                    x: { ticks: { autoSkip: false, maxRotation: 0, font: { size: 10 } } },
+                    y: { min: 0, max: 100, title: { display: true, text: "% du montant total" }, ticks: { callback: (v) => `${v}%` } },
+                  },
+                }}
               />
             </div>
           </div>
+          <p className="text-[10px] text-slate-400 italic mt-1">
+            Les deux courbes sont en % (nombre de commandes à gauche, montant CHF à droite) — un écart entre elles indique qu'une minorité de grosses commandes pèse plus lourd que leur nombre ne le suggère.
+          </p>
           <div className="overflow-auto mt-2">
             <table className="w-full text-[11px] border-collapse">
               <thead>
