@@ -1,4 +1,6 @@
 import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
+import { ChantierPicker } from "../components/ChantierPicker";
+import { FournisseurPicker } from "../components/FournisseurPicker";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import type { NonConformite } from "../types";
@@ -12,9 +14,25 @@ export function NonConformitesPage() {
   const columns: ColumnDef<NonConformite>[] = [
     { key: "date", label: "Date NC", type: "date", width: "85px" },
     { key: "statutNC", label: "Statut", type: "select", options: opts.NC_STATUTS_SIMPLE, width: "100px" },
-    { key: "fournisseur", label: "Fournisseur", width: "120px" },
+    {
+      key: "fournisseur",
+      label: "Fournisseur",
+      width: "150px",
+      render: (d) => <FournisseurPicker value={d.fournisseur} onChange={(v) => update(d.id, { fournisseur: v })} />,
+      filterValue: (d) => d.fournisseur ?? "",
+    },
     { key: "ent", label: "Entité", type: "select", options: opts.ENTITES, width: "80px" },
-    { key: "chant", label: "N° chantier", width: "85px" },
+    {
+      key: "chant",
+      label: "N° chantier",
+      width: "140px",
+      render: (d) => (
+        <ChantierPicker
+          numero={d.chant}
+          onSelect={(numero, nom) => update(d.id, nom !== null ? { chant: numero, nom } : { chant: numero })}
+        />
+      ),
+    },
     { key: "nom", label: "Nom du chantier", width: "150px" },
     { key: "ctx", label: "Contact", width: "100px" },
     { key: "montantCmd", label: "Montant cmd CHF", type: "num", width: "95px" },

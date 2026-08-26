@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,6 +13,7 @@ import {
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import { useOptions } from "../hooks/useOptions";
 import { useResource } from "../hooks/useResource";
+import { api } from "../api";
 import {
   analyseDepense,
   dashLivraisons,
@@ -23,6 +24,7 @@ import {
   gainByTypeBreakdown,
   kpis,
   monthRangeOf,
+  nouveauxFournisseursKpi,
   pertBreakdown,
   prochainesLivraisons,
   ratioSeuil,
@@ -33,7 +35,7 @@ import {
 } from "../lib/dashboard";
 import { exportToExcel } from "../lib/excelExport";
 import { Badge, Card, ChartCard, EmptyLine, LegendList, MiniStat, chf, withPct } from "../components/dashboardUi";
-import type { Livraison, NonConformite, Operation } from "../types";
+import type { Fournisseur, Livraison, NonConformite, Operation } from "../types";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, LineElement, PointElement, Tooltip, Legend);
 
@@ -72,8 +74,13 @@ export function KpiDashboardPage() {
   const operations = useResource<Operation>("operations", {});
   const livraisons = useResource<Livraison>("livraisons", {});
   const nonConformites = useResource<NonConformite>("non-conformites", {});
+  const [fournisseursManuel, setFournisseursManuel] = useState<Fournisseur[] | null>(null);
 
-  if (operations.loading || livraisons.loading || nonConformites.loading) {
+  useEffect(() => {
+    api.fournisseursManuel().then(setFournisseursManuel);
+  }, []);
+
+  if (operations.loading || livraisons.loading || nonConformites.loading || fournisseursManuel === null) {
     return <p className="p-4 text-slate-500">Chargement du tableau de bord…</p>;
   }
 
@@ -82,6 +89,7 @@ export function KpiDashboardPage() {
       operations={operations.rows}
       livraisons={livraisons.rows}
       nonConformites={nonConformites.rows}
+      fournisseursManuel={fournisseursManuel}
       updateOperation={operations.update}
     />
   );
@@ -91,11 +99,13 @@ function KpiDashboardContent({
   operations,
   livraisons,
   nonConformites,
+  fournisseursManuel,
   updateOperation,
 }: {
   operations: Operation[];
   livraisons: Livraison[];
   nonConformites: NonConformite[];
+  fournisseursManuel: Fournisseur[];
   updateOperation: (id: string, patch: Partial<Operation>) => void;
 }) {
   const opts = useOptions();
@@ -110,6 +120,7 @@ function KpiDashboardContent({
   const ratio = useMemo(() => ratioSeuil(operations), [operations]);
   const ratioEvol = useMemo(() => ratioSeuilEvolution(operations, 6), [operations]);
   const ts = useMemo(() => tauxService(livraisons), [livraisons]);
+  const nouveauxFourn = useMemo(() => nouveauxFournisseursKpi(fournisseursManuel, operations), [fournisseursManuel, operations]);
 
   return (
     <div className="space-y-6">
@@ -191,6 +202,8 @@ function KpiDashboardContent({
       </Card>
 
       <AnalyseDepenseSection operations={operations} />
+
+      <NouveauxFournisseursSection k={nouveauxFourn} />
 
       <FournisseurDrilldownSection operations={operations} livraisons={livraisons} nonConformites={nonConformites} />
 
@@ -480,6 +493,55 @@ function TauxServiceSection({ ts }: { ts: ReturnType<typeof tauxService> }) {
         </Card>
       </div>
     </div>
+  );
+}
+
+// ===== Nouveaux fournisseurs (ajoutés manuellement hors référentiel) =====
+
+function NouveauxFournisseursSection({ k }: { k: ReturnType<typeof nouveauxFournisseursKpi> }) {
+  return (
+    <Card title="Nouveaux fournisseurs" subtitle="Fournisseurs ajoutés manuellement, hors référentiel Abacus">
+      {k.total === 0 ? (
+        <EmptyLine text="Aucun nouveau fournisseur ajouté manuellement." />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+            <MiniStat label="Nouveaux fournisseurs" value={k.total} />
+            <MiniStat label="Avec au moins une commande" value={`${k.pctAvecCommande}%`} color="#3B6D11" />
+            <MiniStat label="Gain cumulé généré" value={`CHF ${chf(k.gainCumule)}`} color={k.gainCumule >= 0 ? "#3B6D11" : "#A32D2D"} />
+            <MiniStat label="Hors Suisse" value={`${k.pctHorsSuisse}%`} color="#854F0B" />
+          </div>
+          <div className="overflow-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="text-left text-[10px] uppercase text-slate-400">
+                  <th className="py-1.5 pr-2">Fournisseur</th>
+                  <th className="py-1.5 pr-2">Ville</th>
+                  <th className="py-1.5 pr-2">Pays</th>
+                  <th className="py-1.5 pr-2">A commandé</th>
+                  <th className="py-1.5 pr-2 text-right">Montant total</th>
+                  <th className="py-1.5 text-right">Gain généré</th>
+                </tr>
+              </thead>
+              <tbody>
+                {k.rows.map((r) => (
+                  <tr key={r.nom} className="border-t border-slate-100">
+                    <td className="py-1.5 pr-2 font-medium">{r.nom}</td>
+                    <td className="py-1.5 pr-2">{r.ville || "—"}</td>
+                    <td className="py-1.5 pr-2">
+                      <Badge color={(r.pays ?? "").toUpperCase() === "CH" ? "#3B6D11" : "#854F0B"}>{r.pays || "?"}</Badge>
+                    </td>
+                    <td className="py-1.5 pr-2">{r.aCommande ? "Oui" : "Non"}</td>
+                    <td className="py-1.5 pr-2 text-right">{r.montantTotal > 0 ? `CHF ${chf(r.montantTotal)}` : "—"}</td>
+                    <td className="py-1.5 text-right">{r.gainTotal !== 0 ? `CHF ${chf(r.gainTotal)}` : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </Card>
   );
 }
 

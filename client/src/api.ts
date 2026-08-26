@@ -24,4 +24,11 @@ export const api = {
   options: () => request<import("./types").Options>("/options"),
   fournisseurs: (q: string) =>
     request<import("./types").Fournisseur[]>(`/fournisseurs?q=${encodeURIComponent(q)}`),
+  fournisseursManuel: () => request<import("./types").Fournisseur[]>("/fournisseurs?manuel=true"),
+  addFournisseur: (data: { nom: string; npa?: string | null; ville?: string | null; pays?: string | null }) =>
+    request<import("./types").Fournisseur>("/fournisseurs", { method: "POST", body: JSON.stringify(data) }),
+  chantiers: (q: string) =>
+    request<import("./types").Chantier[]>(`/chantiers?q=${encodeURIComponent(q)}`),
+  addChantier: (data: { numero: string; nom?: string | null; npa?: string | null; ville?: string | null }) =>
+    request<import("./types").Chantier>("/chantiers", { method: "POST", body: JSON.stringify(data) }),
 };

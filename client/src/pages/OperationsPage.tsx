@@ -2,6 +2,9 @@ import { useState } from "react";
 import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
 import { PrioBadge } from "../components/PrioBadge";
 import { VuCheckbox } from "../components/VuCheckbox";
+import { ChantierPicker } from "../components/ChantierPicker";
+import { FournisseurPicker } from "../components/FournisseurPicker";
+import { ConsultationPicker } from "../components/ConsultationPicker";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import { isAtt, isClos } from "../lib/etape";
@@ -74,14 +77,30 @@ export function OperationsPage() {
     { key: "date", label: "Date", type: "date", width: "80px" },
     { key: "dem", label: "Demandeur", width: "110px" },
     { key: "ent", label: "Entité", type: "select", options: opts.ENTITES, width: "80px" },
-    { key: "chant", label: "N° Chantier", width: "80px" },
+    {
+      key: "chant",
+      label: "N° Chantier",
+      width: "140px",
+      render: (o) => (
+        <ChantierPicker
+          numero={o.chant}
+          onSelect={(numero, nom) => update(o.id, nom !== null ? { chant: numero, nom } : { chant: numero })}
+        />
+      ),
+    },
     { key: "nom", label: "Nom du chantier", width: "160px" },
     { key: "type", label: "Type", type: "select", options: opts.TYPES_OP, width: "120px" },
     { key: "impl", label: "Impl.", type: "select", options: opts.IMPL, width: "70px" },
     { key: "fourn", label: "Fournitures", type: "select", options: opts.FOURNITURES, width: "130px" },
     { key: "prec", label: "Précisions", width: "140px" },
     { key: "etape", id: "etapeSelect", label: "Étape", type: "select", options: opts.ETAPES, width: "170px" },
-    { key: "consult", label: "Consultation", width: "130px" },
+    {
+      key: "consult",
+      label: "Consultation",
+      width: "170px",
+      render: (o) => <ConsultationPicker value={o.consult} onChange={(v) => update(o.id, { consult: v })} />,
+      filterValue: (o) => o.consult ?? "",
+    },
     { key: "rem", label: "Remarques", width: "150px" },
     { key: "launch", label: "Lancement", type: "date", width: "80px" },
     { key: "retour", label: "Retour", type: "date", width: "80px" },
@@ -105,7 +124,13 @@ export function OperationsPage() {
       noFilter: true,
     },
     { key: "tco", label: "TCO", type: "select", options: opts.TCO_OPTS, width: "60px" },
-    { key: "fournisseur", label: "Fournisseur", width: "130px" },
+    {
+      key: "fournisseur",
+      label: "Fournisseur",
+      width: "150px",
+      render: (o) => <FournisseurPicker value={o.fournisseur} onChange={(v) => update(o.id, { fournisseur: v })} />,
+      filterValue: (o) => o.fournisseur ?? "",
+    },
     { key: "typeActionAchat", label: "Type action achat", type: "select", options: opts.COMMENT_OPTS, width: "180px" },
     { key: "comment", label: "Commentaire", type: "select", options: opts.COMMENT_OPTS, width: "180px" },
   ];
