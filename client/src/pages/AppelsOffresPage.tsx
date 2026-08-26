@@ -285,6 +285,7 @@ function AoGroupCard({
               <th className="py-1.5 px-2">Demandeur</th>
               <th className="py-1.5 px-2">Fournisseur consulté</th>
               <th className="py-1.5 px-2">Date envoi</th>
+              <th className="py-1.5 px-2">Date retour max</th>
               <th className="py-1.5 px-2">Date retour</th>
               <th className="py-1.5 px-2 text-right">Offre fournisseur (HT)</th>
               <th className="py-1.5 px-2">Validation</th>
@@ -315,7 +316,18 @@ function AoGroupCard({
                   <FournisseurPicker value={r.fournisseur} onChange={(v) => onUpdateRow(r.id, { fournisseur: v })} />
                 </td>
                 <td className="py-1.5 px-2">
-                  <input className="input w-24" placeholder="jj/mm/aa" defaultValue={r.dateEnvoi ?? ""} onBlur={(e) => { if (e.target.value !== (r.dateEnvoi ?? "")) onUpdateRow(r.id, { dateEnvoi: e.target.value }); }} />
+                  {r.operationId ? (
+                    <span className="text-slate-600" title="Reprise du Lancement de l'Opérationnel">{r.dateEnvoi || "—"}</span>
+                  ) : (
+                    <input className="input w-24" placeholder="jj/mm/aa" defaultValue={r.dateEnvoi ?? ""} onBlur={(e) => { if (e.target.value !== (r.dateEnvoi ?? "")) onUpdateRow(r.id, { dateEnvoi: e.target.value }); }} />
+                  )}
+                </td>
+                <td className="py-1.5 px-2">
+                  {r.operationId ? (
+                    <span className="text-slate-600" title="Repris du Retour max de l'Opérationnel">{r.dateRetourMax || "—"}</span>
+                  ) : (
+                    <input className="input w-24" placeholder="jj/mm/aa" defaultValue={r.dateRetourMax ?? ""} onBlur={(e) => { if (e.target.value !== (r.dateRetourMax ?? "")) onUpdateRow(r.id, { dateRetourMax: e.target.value }); }} />
+                  )}
                 </td>
                 <td className="py-1.5 px-2">
                   <input className="input w-24" placeholder="jj/mm/aa" defaultValue={r.dateRetour ?? ""} onBlur={(e) => { if (e.target.value !== (r.dateRetour ?? "")) onUpdateRow(r.id, { dateRetour: e.target.value }); }} />

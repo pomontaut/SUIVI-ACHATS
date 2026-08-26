@@ -144,7 +144,8 @@ model AppelOffre {
   fournisseur         String?
   prec                String?
   statut              String?  @default("En cours")
-  dateEnvoi           String?
+  dateEnvoi           String? // miroir Operation.launch (colonne "Lancement")
+  dateRetourMax       String? // miroir Operation.retourMax
   dateRetour          String?
   rem                 String?
   offreFournisseur    String? // montant de l'offre du fournisseur, en HT
