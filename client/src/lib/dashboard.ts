@@ -2,7 +2,7 @@ import { dateVal } from "./tableFilter";
 import { isAtt, isClos } from "./etape";
 import { joursRetard, livraisonCategorie, parseFrDate, workingDaysBetween } from "./dates";
 import { isAutoPrioType, operationNeedsWarning, operationPrio, prioRank } from "./priority";
-import type { Livraison, NonConformite, Operation, Options, Todo, Transverse } from "../types";
+import type { Fournisseur, Livraison, NonConformite, Operation, Options, Todo, Transverse } from "../types";
 
 function num(v: string | null | undefined): number {
   const n = parseFloat(String(v ?? ""));
@@ -743,5 +743,66 @@ export function fournisseurDrilldown(
     fournisseur, totalMontant, nombreCommandes: ops.length, orders, byMonth, byChantier, byMarchandise, marchandiseByChantier,
     tauxServiceMoyen, ncCount: ncF.length, ncCountMineur, ncCountMajeur, ncByTypologie,
     montantNcTotal, montantNcRecupere, pctRecuperation, ncList: ncF,
+  };
+}
+
+// ===== KPI nouveaux fournisseurs (ajoutés manuellement hors référentiel) =====
+
+export interface NouveauFournisseurRow {
+  nom: string;
+  npa: string | null;
+  ville: string | null;
+  pays: string | null;
+  createdAt: string | null;
+  aCommande: boolean;
+  montantTotal: number;
+  gainTotal: number;
+}
+
+export interface NouveauxFournisseursKpi {
+  rows: NouveauFournisseurRow[];
+  total: number;
+  avecCommande: number;
+  pctAvecCommande: number;
+  gainCumule: number;
+  suisseCount: number;
+  horsSuisseCount: number;
+  pctHorsSuisse: number;
+}
+
+export function nouveauxFournisseursKpi(fournisseursManuel: Fournisseur[], operations: Operation[]): NouveauxFournisseursKpi {
+  const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
+
+  const rows: NouveauFournisseurRow[] = fournisseursManuel.map((f) => {
+    const ops = operations.filter((o) => norm(o.fournisseur) === norm(f.nom));
+    const montantTotal = ops.reduce((s, o) => s + num(o.montant), 0);
+    let gainTotal = 0;
+    for (const o of ops) {
+      const b = numOrNaN(o.budget);
+      const m = numOrNaN(o.montant);
+      const g = numOrNaN(o.gain);
+      if (!Number.isNaN(b) && b > 0) gainTotal += b - m;
+      else if (!Number.isNaN(g)) gainTotal += g;
+    }
+    return {
+      nom: f.nom, npa: f.npa, ville: f.ville, pays: f.pays,
+      createdAt: f.createdAt ?? null,
+      aCommande: ops.some((o) => num(o.montant) > 0),
+      montantTotal, gainTotal,
+    };
+  });
+
+  const total = rows.length;
+  const avecCommande = rows.filter((r) => r.aCommande).length;
+  const gainCumule = rows.reduce((s, r) => s + r.gainTotal, 0);
+  const suisseCount = fournisseursManuel.filter((f) => (f.pays ?? "").toUpperCase() === "CH").length;
+  const horsSuisseCount = fournisseursManuel.filter((f) => f.pays && f.pays.toUpperCase() !== "CH").length;
+
+  return {
+    rows: rows.sort((a, b) => b.montantTotal - a.montantTotal),
+    total, avecCommande,
+    pctAvecCommande: total > 0 ? Math.round((avecCommande / total) * 100) : 0,
+    gainCumule, suisseCount, horsSuisseCount,
+    pctHorsSuisse: total > 0 ? Math.round((horsSuisseCount / total) * 100) : 0,
   };
 }

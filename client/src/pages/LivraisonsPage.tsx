@@ -1,4 +1,6 @@
 import { EditableTable, type ColumnDef, type QuickFilter } from "../components/EditableTable";
+import { ChantierPicker } from "../components/ChantierPicker";
+import { FournisseurPicker } from "../components/FournisseurPicker";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import { livraisonCategorie, statutLivraisonLabel } from "../lib/dates";
@@ -72,12 +74,35 @@ export function LivraisonsPage() {
         ),
       filterValue: (r) => (r.operationId ? "Opérationnel" : "Manuelle"),
     },
-    mirrorColumn("chant", "N° Chantier", "80px", update),
+    {
+      key: "chant",
+      label: "N° Chantier",
+      width: "140px",
+      render: (r) =>
+        r.operationId ? (
+          <span className="text-slate-600">{r.chant || "—"}</span>
+        ) : (
+          <ChantierPicker
+            numero={r.chant}
+            onSelect={(numero, nom) => update(r.id, nom !== null ? { chant: numero, nom } : { chant: numero })}
+          />
+        ),
+    },
     mirrorColumn("nom", "Nom du chantier", "160px", update),
     mirrorColumn("numCmd", "N° Commande", "88px", update),
     mirrorColumn("ent", "Entité", "72px", update, { type: "select", options: opts.ENTITES }),
     mirrorColumn("dem", "Demandeur", "100px", update),
-    mirrorColumn("fournisseur", "Fournisseur", "130px", update),
+    {
+      key: "fournisseur",
+      label: "Fournisseur",
+      width: "150px",
+      render: (r) =>
+        r.operationId ? (
+          <span className="text-slate-600">{r.fournisseur || "—"}</span>
+        ) : (
+          <FournisseurPicker value={r.fournisseur} onChange={(v) => update(r.id, { fournisseur: v })} />
+        ),
+    },
     mirrorColumn("prec", "Produit / Préc.", "140px", update),
     mirrorColumn("montant", "Montant CHF", "90px", update, { type: "num" }),
     mirrorColumn("dateCmd", "Date cmd", "82px", update, { type: "date" }),

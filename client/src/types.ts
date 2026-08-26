@@ -99,6 +99,7 @@ export interface Livraison extends Base {
 }
 
 export interface AppelOffre extends Base {
+  operationId: string | null;
   date: string | null;
   chant: string | null;
   nom: string | null;
@@ -110,11 +111,27 @@ export interface AppelOffre extends Base {
   dateEnvoi: string | null;
   dateRetour: string | null;
   rem: string | null;
+  offreFournisseur: string | null;
+  comparatifTechnique: string | null;
 }
 
 export interface Fournisseur {
   id: string;
   nom: string;
+  npa: string | null;
+  ville: string | null;
+  pays: string | null;
+  manuel: boolean;
+  createdAt: string;
+}
+
+export interface Chantier {
+  id: string;
+  numero: string;
+  nom: string | null;
+  npa: string | null;
+  ville: string | null;
+  manuel: boolean;
 }
 
 export interface Options {

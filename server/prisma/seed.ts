@@ -1,6 +1,8 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import seedData from "./seed-data.json" with { type: "json" };
+import fournisseursAbacus from "./fournisseurs-abacus.json" with { type: "json" };
+import chantiersRef from "./chantiers.json" with { type: "json" };
 
 const prisma = new PrismaClient();
 
@@ -10,10 +12,41 @@ function str(v: unknown): string | null {
   return JSON.stringify(v);
 }
 
+/**
+ * Référentiels fournisseurs/chantiers : contrairement au seed des données
+ * métier ci-dessous (qui ne tourne qu'une fois, base vide), ces deux
+ * imports doivent pouvoir tourner à chaque déploiement pour enrichir un
+ * référentiel déjà en place (ex: ajouter CP/Ville/Pays aux fournisseurs
+ * importés avant cette fonctionnalité) - d'où un upsert par clé unique
+ * plutôt qu'un create bloqué par un compteur.
+ */
+async function seedReferentiels() {
+  console.log(`Référentiel fournisseurs : ${fournisseursAbacus.length} entrées...`);
+  for (const f of fournisseursAbacus as { nom: string; npa: string | null; ville: string | null; pays: string | null }[]) {
+    await prisma.fournisseur.upsert({
+      where: { nom: f.nom },
+      update: { npa: f.npa, ville: f.ville, pays: f.pays },
+      create: { nom: f.nom, npa: f.npa, ville: f.ville, pays: f.pays },
+    });
+  }
+
+  console.log(`Référentiel chantiers : ${chantiersRef.length} entrées...`);
+  for (const c of chantiersRef as { numero: string; nom: string | null; npa: string | null }[]) {
+    await prisma.chantier.upsert({
+      where: { numero: c.numero },
+      update: { nom: c.nom, npa: c.npa },
+      create: { numero: c.numero, nom: c.nom, npa: c.npa },
+    });
+  }
+  console.log("Référentiels à jour.");
+}
+
 async function main() {
+  await seedReferentiels();
+
   const opCount = await prisma.operation.count();
   if (opCount > 0) {
-    console.log("La base contient déjà des données, seed ignoré.");
+    console.log("La base contient déjà des données métier, seed ignoré (référentiels mis à jour ci-dessus).");
     return;
   }
 
@@ -106,14 +139,6 @@ async function main() {
         rem: str(d.rem),
       },
     });
-  }
-
-  console.log(`Import de ${seedData.FOURN_ABACUS.length} fournisseurs (référentiel Abacus)...`);
-  const noms = [...new Set(seedData.FOURN_ABACUS as string[])];
-  const batchSize = 500;
-  for (let i = 0; i < noms.length; i += batchSize) {
-    const batch = noms.slice(i, i + batchSize);
-    await prisma.fournisseur.createMany({ data: batch.map((nom) => ({ nom })) });
   }
 
   console.log("Seed terminé.");

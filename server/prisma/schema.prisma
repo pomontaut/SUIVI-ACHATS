@@ -130,24 +130,48 @@ model Livraison {
 
 // Suivi des appels d'offres / soumissions envoyées aux fournisseurs
 model AppelOffre {
-  id          String   @id @default(cuid())
-  date        String?
-  chant       String?
-  nom         String?
-  ent         String?
-  dem         String?
-  fournisseur String?
-  prec        String?
-  statut      String?  @default("En cours")
-  dateEnvoi   String?
-  dateRetour  String?
-  rem         String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id String @id @default(cuid())
+  // Lien vers l'opération source quand la ligne est générée automatiquement
+  // (cf. syncAppelsOffresFromOperations : TCO=oui + fournisseur listé dans
+  // Consultation) ; null pour une ligne saisie manuellement.
+  operationId         String?
+  date                String?
+  chant               String?
+  nom                 String?
+  ent                 String?
+  dem                 String?
+  fournisseur         String?
+  prec                String?
+  statut              String?  @default("En cours")
+  dateEnvoi           String?
+  dateRetour          String?
+  rem                 String?
+  offreFournisseur    String? // montant de l'offre du fournisseur, en HT
+  comparatifTechnique String? // notes du comparatif technique de cette offre
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([operationId, fournisseur])
 }
 
-// Référentiel fournisseurs (import Abacus / ERP)
+// Référentiel fournisseurs (import Abacus / ERP + ajouts manuels)
 model Fournisseur {
-  id  String @id @default(cuid())
-  nom String @unique
+  id        String   @id @default(cuid())
+  nom       String   @unique
+  npa       String? // code postal
+  ville     String?
+  pays      String?
+  manuel    Boolean  @default(false) // ajouté manuellement (hors import Abacus), pour le suivi KPI des nouveaux fournisseurs
+  createdAt DateTime @default(now())
+}
+
+// Référentiel chantiers (import + ajouts manuels)
+model Chantier {
+  id        String   @id @default(cuid())
+  numero    String   @unique
+  nom       String?
+  npa       String?
+  ville     String?
+  manuel    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
