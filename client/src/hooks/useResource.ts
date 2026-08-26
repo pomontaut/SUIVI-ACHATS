@@ -20,8 +20,8 @@ export function useResource<T extends { id: string }>(name: string, empty: Parti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
 
-  const add = useCallback(async () => {
-    const created = await resource.create(empty);
+  const add = useCallback(async (patch?: Partial<T>) => {
+    const created = await resource.create(patch ? { ...empty, ...patch } : empty);
     setRows((prev) => [...prev, created]);
   }, [name]);
 
