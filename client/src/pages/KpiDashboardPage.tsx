@@ -259,7 +259,20 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
                     { label: `< ${chf(ratio.seuil)} CHF`, data: evolution.map((e) => e.pctCountBelow), borderColor: "#185FA5", backgroundColor: "#185FA5", tension: 0.3 },
                   ],
                 }}
-                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: (v) => `${v}%` } } } }}
+                options={{
+                  responsive: true, maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (ctx) => {
+                      const e = evolution[ctx.dataIndex];
+                      return `${e.pctCountBelow}% des commandes (${e.countBelow} sur ${e.countBelow + e.countAbove})`;
+                    } } },
+                  },
+                  scales: {
+                    x: { ticks: { autoSkip: false, maxRotation: 0 } },
+                    y: { min: 0, max: 100, title: { display: true, text: "% du nombre de commandes" }, ticks: { callback: (v) => `${v}%` } },
+                  },
+                }}
               />
             </div>
             <div className="h-48">
@@ -271,10 +284,26 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
                     { label: `< ${chf(ratio.seuil)} CHF`, data: evolution.map((e) => e.pctMontantBelow), borderColor: "#0F6E56", backgroundColor: "#0F6E56", tension: 0.3 },
                   ],
                 }}
-                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: (v) => `${v}%` } } } }}
+                options={{
+                  responsive: true, maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (ctx) => {
+                      const e = evolution[ctx.dataIndex];
+                      return `${e.pctMontantBelow}% de la dépense (CHF ${chf(e.montantBelow)} sur CHF ${chf(e.montantBelow + e.montantAbove)})`;
+                    } } },
+                  },
+                  scales: {
+                    x: { ticks: { autoSkip: false, maxRotation: 0 } },
+                    y: { min: 0, max: 100, title: { display: true, text: "% du montant total" }, ticks: { callback: (v) => `${v}%` } },
+                  },
+                }}
               />
             </div>
           </div>
+          <p className="text-[10px] text-slate-400 italic mt-1">
+            Les deux courbes sont en % (nombre de commandes à gauche, montant CHF à droite) — un écart entre elles indique qu'une minorité de grosses commandes pèse plus lourd que leur nombre ne le suggère.
+          </p>
           <div className="overflow-auto mt-2">
             <table className="w-full text-[11px] border-collapse">
               <thead>
