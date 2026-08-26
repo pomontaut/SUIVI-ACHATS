@@ -139,6 +139,7 @@ export function AppelsOffresPage() {
             <AoGroupCard
               key={g.key}
               group={g}
+              allGroups={groups}
               opts={opts}
               onUpdateRow={update}
               onUpdateGroup={(patch) => updateGroupFields(g, patch)}
@@ -164,6 +165,7 @@ export function AppelsOffresPage() {
 
 function AoGroupCard({
   group,
+  allGroups,
   opts,
   onUpdateRow,
   onUpdateGroup,
@@ -172,6 +174,7 @@ function AoGroupCard({
   onGenerateTco,
 }: {
   group: AoGroup;
+  allGroups: AoGroup[];
   opts: ReturnType<typeof useOptions>;
   onUpdateRow: (id: string, patch: Partial<AppelOffre>) => void;
   onUpdateGroup: (patch: Partial<AppelOffre>) => void;
@@ -180,6 +183,7 @@ function AoGroupCard({
   onGenerateTco: () => void;
 }) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [moveRowId, setMoveRowId] = useState<string | null>(null);
 
   return (
     <div className="rounded-lg border border-slate-300 bg-white shadow-sm overflow-hidden">
@@ -232,6 +236,7 @@ function AoGroupCard({
               <th className="py-1.5 px-2 text-right">Offre fournisseur (HT)</th>
               <th className="py-1.5 px-2">Remarques</th>
               <th className="py-1.5 px-2 w-8" />
+              <th className="py-1.5 px-2 w-8" />
             </tr>
           </thead>
           <tbody>
@@ -268,6 +273,9 @@ function AoGroupCard({
                   <input className="input" defaultValue={r.rem ?? ""} onBlur={(e) => { if (e.target.value !== (r.rem ?? "")) onUpdateRow(r.id, { rem: e.target.value }); }} />
                 </td>
                 <td className="py-1.5 px-2 text-center">
+                  <button className="text-slate-400 hover:text-indigo-600 text-xs" title="Déplacer vers un autre sujet" onClick={() => setMoveRowId(r.id)}>⇄</button>
+                </td>
+                <td className="py-1.5 px-2 text-center">
                   {confirmId === r.id ? (
                     <div className="flex gap-1 justify-center">
                       <button className="text-red-600 text-xs font-semibold" onClick={() => { onDeleteRow(r.id); setConfirmId(null); }}>Oui</button>
@@ -285,7 +293,85 @@ function AoGroupCard({
       <div className="px-3 py-1.5 border-t border-slate-100">
         <button className="text-xs text-indigo-600 hover:underline" onClick={onAddRow}>+ Ajouter un fournisseur consulté</button>
       </div>
+      {moveRowId && (
+        <MoveRowModal
+          row={group.rows.find((r) => r.id === moveRowId)!}
+          currentGroupKey={group.key}
+          allGroups={allGroups}
+          onMove={(patch) => { onUpdateRow(moveRowId, patch); setMoveRowId(null); }}
+          onClose={() => setMoveRowId(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function MoveRowModal({
+  row,
+  currentGroupKey,
+  allGroups,
+  onMove,
+  onClose,
+}: {
+  row: AppelOffre;
+  currentGroupKey: string;
+  allGroups: AoGroup[];
+  onMove: (patch: Partial<AppelOffre>) => void;
+  onClose: () => void;
+}) {
+  const targets = allGroups.filter((g) => g.key !== currentGroupKey);
+  const [targetKey, setTargetKey] = useState<string>("__new__");
+  const [chant, setChant] = useState("");
+  const [nom, setNom] = useState("");
+  const [prec, setPrec] = useState("");
+  const [date, setDate] = useState(row.date ?? "");
+
+  function confirm() {
+    if (targetKey === "__new__") {
+      onMove({ operationId: null, chant: chant || null, nom: nom || null, prec: prec || null, date: date || null });
+      return;
+    }
+    const target = targets.find((g) => g.key === targetKey);
+    if (!target) return;
+    onMove({ operationId: null, chant: target.chant || null, nom: target.nom === "—" ? null : target.nom, prec: target.prec === "—" ? null : target.prec, date: target.date });
+  }
+
+  return (
+    <Modal title={`Déplacer "${row.fournisseur}" vers un autre sujet`} onClose={onClose}>
+      <div className="space-y-2">
+        <p className="text-xs text-slate-500">Ce fournisseur quittera son rattachement automatique et sera géré manuellement sous le sujet choisi.</p>
+        <select className="input" value={targetKey} onChange={(e) => setTargetKey(e.target.value)}>
+          <option value="__new__">— Nouveau sujet —</option>
+          {targets.map((g) => (
+            <option key={g.key} value={g.key}>AO {g.numeroAO} — {g.chant || "sans chantier"} — {g.nom} — {g.prec}</option>
+          ))}
+        </select>
+        {targetKey === "__new__" && (
+          <div className="space-y-2 pt-1">
+            <div>
+              <label className="text-xs text-slate-500">N° de chantier</label>
+              <ChantierPicker numero={chant || null} onSelect={(numero, n) => { setChant(numero); if (n !== null) setNom(n); }} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500">Nom du chantier</label>
+              <input className="input" value={nom} onChange={(e) => setNom(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500">Objet de l'AO</label>
+              <input className="input" value={prec} onChange={(e) => setPrec(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500">Date</label>
+              <input className="input" placeholder="jj/mm/aa" value={date ?? ""} onChange={(e) => setDate(e.target.value)} />
+            </div>
+          </div>
+        )}
+        <div className="flex justify-end gap-2 pt-2">
+          <button className="text-xs text-slate-500 px-3 py-1.5" onClick={onClose}>Annuler</button>
+          <button className="text-xs bg-indigo-600 text-white rounded px-3 py-1.5 hover:bg-indigo-700" onClick={confirm}>Déplacer</button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
