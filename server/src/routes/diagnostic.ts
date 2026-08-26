@@ -84,7 +84,17 @@ diagnosticRouter.get("/20260825", async (_req, res) => {
   const livByNumCmd = new Map(livraisons.filter((l) => l.numCmd).map((l) => [norm(l.numCmd), l]));
   const missingLiv = data.liv1.filter((r) => !r.numCmd || !livByNumCmd.has(norm(r.numCmd)));
 
-  res.json({ counts, missingNc, missingLiv });
+  const opById = new Map(data.op3.map((o) => [o.id, o]));
+  const aoKeyOf = (a: { chant?: string | null; nom?: string | null; fournisseur?: string | null; dateEnvoi?: string | null }) =>
+    nkey(a.chant, a.nom, a.fournisseur, a.dateEnvoi);
+  const aoByKey = new Map(appelsOffres.map((a) => [aoKeyOf(a), a]));
+  const missingAo = data.ao1.filter((r) => {
+    const opRaw = opById.get(r._opId);
+    const key = aoKeyOf({ chant: opRaw?.chant, nom: opRaw?.nom, fournisseur: r.fournisseur, dateEnvoi: r.launch });
+    return !aoByKey.has(key);
+  });
+
+  res.json({ counts, missingNc, missingLiv, missingAo });
 });
 
 /**

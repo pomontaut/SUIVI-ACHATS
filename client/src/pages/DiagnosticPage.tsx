@@ -19,10 +19,14 @@ interface MissingLiv {
   chant?: string;
   nom?: string;
 }
+interface MissingAo {
+  fournisseur?: string;
+}
 interface DiagResult {
   counts: Counts[];
   missingNc: MissingNc[];
   missingLiv: MissingLiv[];
+  missingAo: MissingAo[];
 }
 interface FixReport {
   nonConformites: { created: number; skipped: number; errors: string[] };
@@ -83,7 +87,7 @@ export function DiagnosticPage() {
         {error && <p className="text-sm text-red-700 mt-3">Erreur : {error}</p>}
       </Card>
 
-      {result && (result.missingNc.length > 0 || result.missingLiv.length > 0) && (
+      {result && (result.missingNc.length > 0 || result.missingLiv.length > 0 || result.missingAo.length > 0) && (
         <Card title="Corriger automatiquement" subtitle="Ne crée que ce qui manque et ne remplit que les champs vides — n'écrase jamais une donnée déjà saisie.">
           <button
             className="px-4 py-2 rounded-lg bg-green-700 text-white text-sm font-medium hover:bg-green-800 disabled:opacity-50"
@@ -181,6 +185,27 @@ export function DiagnosticPage() {
                       <td className="py-1.5 pr-2">{r.fournisseur || "—"}</td>
                       <td className="py-1.5 pr-2">{r.chant || "—"}</td>
                       <td className="py-1.5">{r.nom || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+
+          <Card title="Appels d'offres manquants" subtitle={`${result.missingAo.length} sur ${result.counts.find((c) => c.label === "Appels d'offres")?.expected ?? 0}`}>
+            {result.missingAo.length === 0 ? (
+              <EmptyLine text="Aucun — tout est présent." />
+            ) : (
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="text-left text-[10px] uppercase text-slate-400">
+                    <th className="py-1.5">Fournisseur consulté</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.missingAo.map((r, i) => (
+                    <tr key={i} className="border-t border-slate-100">
+                      <td className="py-1.5">{r.fournisseur || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
