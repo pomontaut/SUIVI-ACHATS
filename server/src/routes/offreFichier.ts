@@ -5,7 +5,8 @@ import { rm } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "../lib/prisma.js";
 import { uploadsDir } from "../lib/uploads.js";
-import { extractOffreMontant } from "../lib/extractOffre.js";
+import { extractOffreMontant, extractOffrePostes } from "../lib/extractOffre.js";
+import { aoSujetKeyOf, matchAoPostesFromExtraction } from "../lib/matchAoPostes.js";
 
 export const offreFichierRouter = Router();
 
@@ -59,6 +60,18 @@ offreFichierRouter.post("/:id/offre-fichier", upload.single("file"), async (req,
           : { offreExtractionNote: extraction.commentaire },
       });
     }
+  }
+
+  // Extraction du détail poste par poste, pour le comparatif TCO détaillé
+  // (cf. AoPoste/AoPosteMontant) - indépendante de l'extraction du montant
+  // global ci-dessus, ne fait jamais échouer l'upload.
+  try {
+    const postesExtraction = await extractOffrePostes(req.file.path, req.file.originalname);
+    if (postesExtraction) {
+      await matchAoPostesFromExtraction(row.id, aoSujetKeyOf(row), postesExtraction.postes);
+    }
+  } catch (err) {
+    console.error("Rattachement des postes extraits échoué:", err instanceof Error ? err.message : err);
   }
 
   res.json(row);

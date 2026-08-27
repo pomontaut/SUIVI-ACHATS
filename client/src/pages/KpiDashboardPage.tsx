@@ -285,7 +285,7 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
         </div>
       </Card>
       <div className="md:col-span-2">
-        <Card title="Évolution du ratio sur 6 mois" subtitle="Pour repérer une dérive de la dépense hors sujets suivis">
+        <Card title="Évolution du ratio sur 6 mois" subtitle="6 derniers mois civils complets (mois en cours exclu, données partielles) — pour repérer une dérive de la dépense hors sujets suivis">
           <div className="grid md:grid-cols-2 gap-4">
             <div className="h-64">
               <p className="text-[10px] uppercase text-slate-400 mb-1">En nombre de commandes</p>
@@ -304,6 +304,7 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
                     legend: { display: false },
                     tooltip: { callbacks: { label: (ctx) => {
                       const e = evolution[ctx.dataIndex];
+                      if (e.pctCountBelow === null) return "Aucune commande ce mois-ci";
                       return `${e.pctCountBelow}% des commandes (${e.countBelow} sur ${e.countBelow + e.countAbove})`;
                     } } },
                   },
@@ -331,6 +332,7 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
                     legend: { display: false },
                     tooltip: { callbacks: { label: (ctx) => {
                       const e = evolution[ctx.dataIndex];
+                      if (e.pctMontantBelow === null) return "Aucune commande ce mois-ci";
                       return `${e.pctMontantBelow}% de la dépense (CHF ${chf(e.montantBelow)} sur CHF ${chf(e.montantBelow + e.montantAbove)})`;
                     } } },
                   },
@@ -354,9 +356,15 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
                 {evolution.map((e) => (
                   <tr key={e.monthKey} className="border-t border-slate-100">
                     <td className="py-1 pr-2">{e.label}</td>
-                    <td className="py-1 pr-2 text-right">{e.countBelow} ({e.pctCountBelow}%)</td>
-                    <td className="py-1 pr-2 text-right">{e.countBelow + e.countAbove}</td>
-                    <td className="py-1 pr-2 text-right">CHF {chf(e.montantBelow)} ({e.pctMontantBelow}%)</td>
+                    {e.countBelow + e.countAbove === 0 ? (
+                      <td className="py-1 pr-2 text-right text-slate-400 italic" colSpan={3}>Aucune commande</td>
+                    ) : (
+                      <>
+                        <td className="py-1 pr-2 text-right">{e.countBelow} ({e.pctCountBelow}%)</td>
+                        <td className="py-1 pr-2 text-right">{e.countBelow + e.countAbove}</td>
+                        <td className="py-1 pr-2 text-right">CHF {chf(e.montantBelow)} ({e.pctMontantBelow}%)</td>
+                      </>
+                    )}
                     <td className="py-1 text-right">CHF {chf(e.montantBelow + e.montantAbove)}</td>
                   </tr>
                 ))}

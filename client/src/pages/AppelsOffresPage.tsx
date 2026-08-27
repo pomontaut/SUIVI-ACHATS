@@ -4,6 +4,7 @@ import { FournisseurPicker } from "../components/FournisseurPicker";
 import { FichierControl } from "../components/FichierControl";
 import { Modal } from "../components/Modal";
 import { EmptyLine } from "../components/dashboardUi";
+import { AoPostesComparatif, type PostesComparatifHandle } from "../components/AoPostesComparatif";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import { dateVal } from "../lib/tableFilter";
@@ -467,6 +468,7 @@ function MoveRowModal({
 }
 
 function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGroup; onUpdate: (id: string, patch: Partial<AppelOffre>) => void; onFileChanged: () => void; onClose: () => void }) {
+  const [postesData, setPostesData] = useState<PostesComparatifHandle | null>(null);
   const offres = groupe.rows
     .map((r) => ({ row: r, montant: parseFloat(r.offreFournisseur ?? "") }))
     .sort((a, b) => {
@@ -477,29 +479,54 @@ function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGrou
   const cheapest = offres.find((o) => !Number.isNaN(o.montant))?.montant;
 
   function exportTco() {
-    exportSheetsToExcel(
-      [
-        {
-          name: "Comparatif financier",
-          rows: offres.map(({ row, montant }) => ({
-            Fournisseur: row.fournisseur ?? "",
-            "Offre HT (CHF)": row.offreFournisseur ?? "",
-            "Écart vs moins cher (CHF)": !Number.isNaN(montant) && cheapest !== undefined && montant > cheapest ? montant - cheapest : "",
-            Statut: row.statut ?? "",
-            Validation: row.validation ?? "",
-            "Remarque extraction auto": row.offreMontantAuto ? "Montant extrait automatiquement — à vérifier" : (row.offreExtractionNote ?? ""),
-          })),
-        },
-        {
-          name: "Comparatif technique",
-          rows: groupe.rows.map((row) => ({
-            Fournisseur: row.fournisseur ?? "",
-            "Notes techniques / logistiques": row.comparatifTechnique ?? "",
-          })),
-        },
-      ],
-      `TCO-${groupe.numeroAO}-${groupe.chant || "sanschantier"}`,
-    );
+    const sheets = [
+      {
+        name: "Comparatif financier",
+        rows: offres.map(({ row, montant }) => ({
+          Fournisseur: row.fournisseur ?? "",
+          "Offre HT (CHF)": row.offreFournisseur ?? "",
+          "Écart vs moins cher (CHF)": !Number.isNaN(montant) && cheapest !== undefined && montant > cheapest ? montant - cheapest : "",
+          Statut: row.statut ?? "",
+          Validation: row.validation ?? "",
+          "Remarque extraction auto": row.offreMontantAuto ? "Montant extrait automatiquement — à vérifier" : (row.offreExtractionNote ?? ""),
+        })),
+      },
+    ];
+    if (postesData && postesData.postes.length > 0) {
+      const num = (v: string | null | undefined) => { const n = parseFloat(String(v ?? "")); return Number.isNaN(n) ? null : n; };
+      sheets.push({
+        name: "Comparatif par poste",
+        rows: postesData.postes.map((poste) => {
+          const row: Record<string, string | number> = {
+            "Réf.": poste.reference ?? "",
+            Poste: poste.libelle ?? "",
+            "Budget (CHF)": poste.budget ?? "",
+          };
+          const posteValues: number[] = [];
+          for (const r of groupe.rows) {
+            const m = postesData.montants.find((x) => x.posteId === poste.id && x.appelOffreId === r.id);
+            const v = num(m?.montant);
+            if (v !== null) posteValues.push(v);
+            row[`${r.fournisseur ?? "—"} (CHF)`] = m?.montant ?? "";
+          }
+          const posteCheapest = posteValues.length > 0 ? Math.min(...posteValues) : null;
+          for (const r of groupe.rows) {
+            const m = postesData.montants.find((x) => x.posteId === poste.id && x.appelOffreId === r.id);
+            const v = num(m?.montant);
+            row[`${r.fournisseur ?? "—"} — écart vs moins cher`] = v !== null && posteCheapest !== null && v > posteCheapest ? v - posteCheapest : "";
+          }
+          return row;
+        }),
+      });
+    }
+    sheets.push({
+      name: "Comparatif technique",
+      rows: groupe.rows.map((row) => ({
+        Fournisseur: row.fournisseur ?? "",
+        "Notes techniques / logistiques": row.comparatifTechnique ?? "",
+      })),
+    });
+    exportSheetsToExcel(sheets, `TCO-${groupe.numeroAO}-${groupe.chant || "sanschantier"}`);
   }
 
   return (
@@ -559,6 +586,8 @@ function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGrou
             })}
           </tbody>
         </table>
+
+        <AoPostesComparatif sujetCle={groupe.key} rows={groupe.rows} onDataChanged={setPostesData} />
 
         <h4 className="text-xs font-semibold uppercase text-slate-400 mb-2">Comparatif technique / logistique</h4>
         <div className="grid md:grid-cols-2 gap-3">

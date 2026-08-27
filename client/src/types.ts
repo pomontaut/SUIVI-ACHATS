@@ -129,6 +129,23 @@ export interface AoSujet {
   numCmd: string | null;
 }
 
+export interface AoPoste {
+  id: string;
+  sujetCle: string;
+  reference: string | null;
+  libelle: string | null;
+  budget: string | null;
+  ordre: number;
+}
+
+export interface AoPosteMontant {
+  id: string;
+  posteId: string;
+  appelOffreId: string;
+  montant: string | null;
+  montantAuto: boolean;
+}
+
 export interface SuiviAdministratif extends Base {
   operationId: string | null;
   date: string | null;
