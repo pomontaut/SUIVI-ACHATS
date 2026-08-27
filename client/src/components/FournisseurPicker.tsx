@@ -100,7 +100,7 @@ export function FournisseurPicker({ value, onChange }: { value: string | null; o
   );
 }
 
-function AddFournisseurModal({ initialNom, onClose, onCreated }: { initialNom: string; onClose: () => void; onCreated: (f: Fournisseur) => void }) {
+export function AddFournisseurModal({ initialNom, onClose, onCreated }: { initialNom: string; onClose: () => void; onCreated: (f: Fournisseur) => void }) {
   const [nom, setNom] = useState(initialNom);
   const [npa, setNpa] = useState("");
   const [ville, setVille] = useState("");
