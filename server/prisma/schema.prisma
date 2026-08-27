@@ -136,6 +136,13 @@ model AppelOffre {
   // (cf. syncAppelsOffresFromOperations : TCO=oui + fournisseur listé dans
   // Consultation) ; null pour une ligne saisie manuellement.
   operationId         String?
+  // Tag de consultation d'origine (une entrée de Operation.consult) : sert
+  // d'identité stable pour la resynchronisation, indépendamment du champ
+  // fournisseur ci-dessous qui reste librement modifiable une fois la
+  // ligne créée (ex: préciser "Helmut Breschan AG" là où la consultation
+  // ne portait que "Breschan") sans que la ligne soit reconstruite/perdue
+  // au prochain resync.
+  consultTag          String?
   date                String?
   chant               String?
   nom                 String?
@@ -158,7 +165,7 @@ model AppelOffre {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  @@unique([operationId, fournisseur])
+  @@unique([operationId, consultTag])
 }
 
 // Statut de commande au niveau du "sujet AO" (regroupement virtuel de

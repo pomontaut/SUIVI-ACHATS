@@ -18,14 +18,22 @@ function contentKey(chant: string | null, nom: string | null, fournisseur: strin
  * jamais écrasés : seuls les champs "miroir" de l'opération source sont
  * resynchronisés.
  *
+ * L'identité d'une ligne auto-générée (pour la resynchronisation et la
+ * détection des orphelins) repose sur operationId + consultTag, le tag de
+ * consultation d'origine — jamais sur le champ fournisseur, librement
+ * modifiable ensuite par l'utilisateur (ex: préciser "Helmut Breschan AG" là
+ * où la consultation ne portait que "Breschan") sans que la ligne soit
+ * reconstruite/perdue au prochain resync.
+ *
  * Avant de créer une ligne, on cherche d'abord une ligne existante sans
  * operationId (saisie manuelle, ou reprise de l'ancien outil avant que ce
  * lien n'existe) dont chantier + nom + fournisseur correspondent déjà : on
- * l'adopte (on lui attribue l'operationId) plutôt que d'en créer un doublon.
- * Si une ligne auto-générée existe déjà pour cette opération+fournisseur,
- * une éventuelle ligne non liée avec la même clé est un doublon résiduel
- * (créé avant l'introduction de l'adoption ci-dessus) : elle est fusionnée
- * dans la ligne conservée puis supprimée, jamais adoptée en double.
+ * l'adopte (on lui attribue l'operationId + consultTag) plutôt que d'en
+ * créer un doublon. Si une ligne auto-générée existe déjà pour cette
+ * opération+tag, une éventuelle ligne non liée avec la même clé est un
+ * doublon résiduel (créé avant l'introduction de l'adoption ci-dessus) :
+ * elle est fusionnée dans la ligne conservée puis supprimée, jamais adoptée
+ * en double.
  */
 export async function syncAppelsOffresFromOperations(): Promise<void> {
   const operations = await prisma.operation.findMany({
@@ -33,11 +41,11 @@ export async function syncAppelsOffresFromOperations(): Promise<void> {
   });
   const allRows = await prisma.appelOffre.findMany();
 
-  const byOpFournisseur = new Map<string, AppelOffre>();
+  const byOpConsultTag = new Map<string, AppelOffre>();
   const unlinkedByContentKey = new Map<string, AppelOffre[]>();
   for (const row of allRows) {
     if (row.operationId) {
-      byOpFournisseur.set(`${row.operationId}|${row.fournisseur}`, row);
+      byOpConsultTag.set(`${row.operationId}|${row.consultTag ?? row.fournisseur}`, row);
     } else {
       const key = contentKey(row.chant, row.nom, row.fournisseur ?? "");
       const bucket = unlinkedByContentKey.get(key) ?? [];
@@ -47,23 +55,24 @@ export async function syncAppelsOffresFromOperations(): Promise<void> {
   }
 
   const duplicatesToMerge: { keep: AppelOffre; drop: AppelOffre }[] = [];
-  const qualifyingPairs: { operationId: string; fournisseur: string }[] = [];
+  const qualifyingKeys: string[] = [];
 
   for (const o of operations) {
     const fournisseurs = parseConsult(o.consult);
-    for (const fournisseur of fournisseurs) {
-      qualifyingPairs.push({ operationId: o.id, fournisseur });
+    for (const tag of fournisseurs) {
+      const opKey = `${o.id}|${tag}`;
+      qualifyingKeys.push(opKey);
       const mirror = {
         date: o.date, chant: o.chant, nom: o.nom, ent: o.ent, dem: o.dem, prec: o.prec,
         dateEnvoi: o.launch, dateRetourMax: o.retourMax,
       };
-      const opKey = `${o.id}|${fournisseur}`;
-      const existingAuto = byOpFournisseur.get(opKey);
-      const contentK = contentKey(o.chant, o.nom, fournisseur);
+      const existingAuto = byOpConsultTag.get(opKey);
+      const contentK = contentKey(o.chant, o.nom, tag);
       const unlinkedBucket = unlinkedByContentKey.get(contentK);
 
       if (existingAuto) {
-        // Ligne auto déjà présente : on la resynchronise, et toute ligne
+        // Ligne auto déjà présente : on la resynchronise (sans toucher à
+        // fournisseur, librement modifié par l'utilisateur), et toute ligne
         // non liée avec la même clé est un doublon résiduel à fusionner.
         await prisma.appelOffre.update({ where: { id: existingAuto.id }, data: mirror });
         if (unlinkedBucket) {
@@ -74,13 +83,13 @@ export async function syncAppelsOffresFromOperations(): Promise<void> {
 
       const adoptable = unlinkedBucket?.shift();
       if (adoptable) {
-        const updated = await prisma.appelOffre.update({ where: { id: adoptable.id }, data: { operationId: o.id, fournisseur, ...mirror } });
-        byOpFournisseur.set(opKey, updated);
+        const updated = await prisma.appelOffre.update({ where: { id: adoptable.id }, data: { operationId: o.id, consultTag: tag, fournisseur: tag, ...mirror } });
+        byOpConsultTag.set(opKey, updated);
         continue;
       }
 
-      const created = await prisma.appelOffre.create({ data: { operationId: o.id, fournisseur, ...mirror } });
-      byOpFournisseur.set(opKey, created);
+      const created = await prisma.appelOffre.create({ data: { operationId: o.id, consultTag: tag, fournisseur: tag, ...mirror } });
+      byOpConsultTag.set(opKey, created);
     }
   }
 
@@ -96,10 +105,12 @@ export async function syncAppelsOffresFromOperations(): Promise<void> {
   }
 
   // Un appel d'offres auto-généré dont l'opération n'est plus TCO=oui, ou
-  // dont le fournisseur a été retiré de la consultation, ne doit plus exister.
-  const qualifyingKeys = new Set(qualifyingPairs.map((p) => `${p.operationId}|${p.fournisseur}`));
-  const orphanIds = [...byOpFournisseur.values()]
-    .filter((a) => !qualifyingKeys.has(`${a.operationId}|${a.fournisseur}`))
+  // dont le tag de consultation a été retiré de la consultation, ne doit
+  // plus exister (le fournisseur, potentiellement renommé par l'utilisateur
+  // depuis, n'intervient jamais dans cette détection).
+  const qualifyingSet = new Set(qualifyingKeys);
+  const orphanIds = [...byOpConsultTag.values()]
+    .filter((a) => !qualifyingSet.has(`${a.operationId}|${a.consultTag ?? a.fournisseur}`))
     .map((a) => a.id);
   if (orphanIds.length > 0) {
     await prisma.appelOffre.deleteMany({ where: { id: { in: orphanIds } } });
