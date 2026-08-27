@@ -16,12 +16,27 @@ const PRIO_ROW_BORDER: Record<string, string> = {
   P1: "border-l-4 !border-l-amber-400",
 };
 
+/** Gain/perte = Montant - Budget (négatif = économie, positif = dépassement,
+ * cohérent avec le signe attendu par gainPct ci-dessous). Calculé
+ * automatiquement dès que le budget et le montant sont tous les deux
+ * renseignés ; retourne null sinon (saisie manuelle conservée dans ce cas). */
+function autoGain(budget: string | null, montant: string | null): string | null {
+  const b = parseFloat(budget ?? "");
+  const m = parseFloat(montant ?? "");
+  if (Number.isNaN(b) || Number.isNaN(m)) return null;
+  return String(Math.round((m - b) * 100) / 100);
+}
+
 /** Reprend le calcul de gainPct de l'outil d'origine : pourcentage
- * d'économie (positif) ou de dépassement (négatif) par rapport au budget. */
+ * d'économie (positif) ou de dépassement (négatif) par rapport au budget.
+ * Priorité au gain calculé en direct depuis budget/montant (cohérent avec
+ * la colonne Gain/perte et avec dashboard.ts), à défaut la valeur stockée. */
 function gainPct(o: Operation): number | null {
   const budget = parseFloat(o.budget ?? "");
-  const gain = parseFloat(o.gain ?? "");
-  if (Number.isNaN(budget) || budget === 0 || Number.isNaN(gain)) return null;
+  if (Number.isNaN(budget) || budget === 0) return null;
+  const auto = autoGain(o.budget, o.montant);
+  const gain = parseFloat(auto ?? o.gain ?? "");
+  if (Number.isNaN(gain)) return null;
   return Math.round(((-gain / budget) * 100) * 10) / 10;
 }
 
@@ -108,10 +123,64 @@ export function OperationsPage() {
     { key: "dateCmd", label: "Date cmd", type: "date", width: "80px" },
     { key: "dateLivraison", label: "Date livraison", type: "date", width: "90px" },
     { key: "numCmd", label: "N° cmd", width: "80px" },
-    { key: "budget", label: "Budget", type: "num", width: "80px" },
+    {
+      key: "budget",
+      label: "Budget",
+      type: "num",
+      width: "80px",
+      render: (o) => (
+        <input
+          className="input"
+          defaultValue={o.budget ?? ""}
+          onBlur={(e) => {
+            if (e.target.value === (o.budget ?? "")) return;
+            const patch: Partial<Operation> = { budget: e.target.value };
+            const g = autoGain(e.target.value, o.montant);
+            if (g !== null) patch.gain = g;
+            update(o.id, patch);
+          }}
+        />
+      ),
+    },
     { key: "typeBudget", label: "Type budget", type: "select", options: opts.BUDGET_TYPE_OPTS, width: "150px" },
-    { key: "montant", label: "Montant", type: "num", width: "90px" },
-    { key: "gain", label: "Gain/perte", type: "num", width: "80px" },
+    {
+      key: "montant",
+      label: "Montant",
+      type: "num",
+      width: "90px",
+      render: (o) => (
+        <input
+          className="input"
+          defaultValue={o.montant ?? ""}
+          onBlur={(e) => {
+            if (e.target.value === (o.montant ?? "")) return;
+            const patch: Partial<Operation> = { montant: e.target.value };
+            const g = autoGain(o.budget, e.target.value);
+            if (g !== null) patch.gain = g;
+            update(o.id, patch);
+          }}
+        />
+      ),
+    },
+    {
+      key: "gain",
+      label: "Gain/perte",
+      width: "80px",
+      filterValue: (o) => autoGain(o.budget, o.montant) ?? (o.gain ?? ""),
+      render: (o) => {
+        const auto = autoGain(o.budget, o.montant);
+        if (auto !== null) {
+          return <span className="text-slate-600" title="Calculé automatiquement (Montant − Budget)">{auto}</span>;
+        }
+        return (
+          <input
+            className="input"
+            defaultValue={o.gain ?? ""}
+            onBlur={(e) => { if (e.target.value !== (o.gain ?? "")) update(o.id, { gain: e.target.value }); }}
+          />
+        );
+      },
+    },
     {
       key: "gain",
       id: "gainPct",
