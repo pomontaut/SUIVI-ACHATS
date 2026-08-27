@@ -342,6 +342,9 @@ function AoGroupCard({
                       onBlur={(e) => { if (e.target.value !== (r.offreFournisseur ?? "")) onUpdateRow(r.id, { offreFournisseur: e.target.value, offreMontantAuto: false }); }}
                     />
                     {r.offreMontantAuto && <span className="text-[9px] text-amber-600" title={r.offreExtractionNote ?? ""}>🤖 à vérifier</span>}
+                    {!r.offreMontantAuto && r.offreExtractionNote && (
+                      <span className="text-[9px] text-red-600 max-w-[110px] text-right" title={r.offreExtractionNote}>⚠ {r.offreExtractionNote}</span>
+                    )}
                     <FichierControl
                       nom={r.offreFichierNom}
                       url={r.offreFichierUrl}
@@ -484,6 +487,7 @@ function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGrou
             "Écart vs moins cher (CHF)": !Number.isNaN(montant) && cheapest !== undefined && montant > cheapest ? montant - cheapest : "",
             Statut: row.statut ?? "",
             Validation: row.validation ?? "",
+            "Remarque extraction auto": row.offreMontantAuto ? "Montant extrait automatiquement — à vérifier" : (row.offreExtractionNote ?? ""),
           })),
         },
         {
@@ -533,6 +537,9 @@ function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGrou
                       onBlur={(e) => { if (e.target.value !== (row.offreFournisseur ?? "")) onUpdate(row.id, { offreFournisseur: e.target.value, offreMontantAuto: false }); }}
                     />
                     {row.offreMontantAuto && <div className="text-[9px] text-amber-600 text-right">🤖 à vérifier</div>}
+                    {!row.offreMontantAuto && row.offreExtractionNote && (
+                      <div className="text-[9px] text-red-600 text-right" title={row.offreExtractionNote}>⚠ {row.offreExtractionNote}</div>
+                    )}
                   </td>
                   <td className="py-1.5 pr-2 text-right text-slate-500">
                     {!Number.isNaN(montant) && cheapest !== undefined && montant > cheapest ? `+CHF ${chf(montant - cheapest)}` : "—"}

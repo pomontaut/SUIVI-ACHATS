@@ -36,23 +36,27 @@ offreFichierRouter.post("/:id/offre-fichier", upload.single("file"), async (req,
     const oldPath = path.join(uploadsDir(), previous.offreFichierUrl.replace(/^\/uploads\//, ""));
     await rm(oldPath, { force: true });
   }
+  // Un nouveau fichier remplace l'ancien : la remarque d'extraction d'une
+  // tentative précédente n'a plus lieu d'être tant qu'une nouvelle n'a pas
+  // eu lieu sur ce fichier.
   let row = await prisma.appelOffre.update({
     where: { id: req.params.id },
-    data: { offreFichierNom: req.file.originalname, offreFichierUrl: url },
+    data: { offreFichierNom: req.file.originalname, offreFichierUrl: url, offreExtractionNote: null },
   });
 
   // Extraction automatique du montant HT depuis le fichier joint - ne
   // remplace jamais un montant saisi/confirmé manuellement par l'utilisateur.
+  // Le commentaire d'extraction est toujours enregistré dès qu'une
+  // tentative a eu lieu (succès ou échec), pour que l'utilisateur voie
+  // pourquoi le champ reste vide plutôt qu'un silence sans explication.
   if (!previous?.offreFournisseur || previous.offreMontantAuto) {
     const extraction = await extractOffreMontant(req.file.path, req.file.originalname);
-    if (extraction && extraction.montantHT !== null) {
+    if (extraction) {
       row = await prisma.appelOffre.update({
         where: { id: req.params.id },
-        data: {
-          offreFournisseur: String(extraction.montantHT),
-          offreMontantAuto: true,
-          offreExtractionNote: extraction.commentaire,
-        },
+        data: extraction.montantHT !== null
+          ? { offreFournisseur: String(extraction.montantHT), offreMontantAuto: true, offreExtractionNote: extraction.commentaire }
+          : { offreExtractionNote: extraction.commentaire },
       });
     }
   }
@@ -68,7 +72,7 @@ offreFichierRouter.delete("/:id/offre-fichier", async (req, res) => {
   }
   const row = await prisma.appelOffre.update({
     where: { id: req.params.id },
-    data: { offreFichierNom: null, offreFichierUrl: null },
+    data: { offreFichierNom: null, offreFichierUrl: null, offreExtractionNote: null },
   });
   res.json(row);
 });
