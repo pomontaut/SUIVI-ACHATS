@@ -210,6 +210,39 @@ model SuiviAdministratif {
   updatedAt    DateTime @updatedAt
 }
 
+// Poste budgétaire d'un "sujet AO" (même regroupement que AoSujet.cle :
+// date + chantier + objet), pour un comparatif financier détaillé poste par
+// poste entre les fournisseurs consultés, à l'image des comparatifs de
+// référence transmis par l'utilisateur (n° article, libellé, budget INDUNI,
+// puis un montant par fournisseur avec écarts calculés). Un poste est
+// partagé par tous les fournisseurs du sujet ; son budget est saisi
+// manuellement (aucune source PDF pour le budget interne).
+model AoPoste {
+  id        String   @id @default(cuid())
+  sujetCle  String
+  reference String?
+  libelle   String?
+  budget    String?
+  ordre     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Montant chiffré par un fournisseur (une ligne AppelOffre) pour un poste
+// donné. montantAuto=true si extrait automatiquement de l'offre PDF jointe
+// (à vérifier), jamais écrasé une fois modifié à la main.
+model AoPosteMontant {
+  id           String   @id @default(cuid())
+  posteId      String
+  appelOffreId String
+  montant      String?
+  montantAuto  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([posteId, appelOffreId])
+}
+
 // Référentiel fournisseurs (import Abacus / ERP + ajouts manuels)
 model Fournisseur {
   id        String   @id @default(cuid())

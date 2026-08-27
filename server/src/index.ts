@@ -11,6 +11,7 @@ import { chantiersRouter } from "./routes/chantiers.js";
 import { diagnosticRouter } from "./routes/diagnostic.js";
 import { offreFichierRouter } from "./routes/offreFichier.js";
 import { aoSujetsRouter } from "./routes/aoSujets.js";
+import { aoPostesRouter } from "./routes/aoPostes.js";
 import { fichierRouter } from "./lib/fichierRoutes.js";
 import { syncLivraisonsFromOperations } from "./lib/syncLivraisons.js";
 import { syncAppelsOffresFromOperations } from "./lib/syncAppelsOffres.js";
@@ -33,6 +34,7 @@ app.use("/api/livraisons", crudRouter(prisma.livraison, { beforeList: syncLivrai
 app.use("/api/appels-offres", offreFichierRouter);
 app.use("/api/appels-offres", crudRouter(prisma.appelOffre, { beforeList: syncAppelsOffresFromOperations }));
 app.use("/api/ao-sujets", aoSujetsRouter);
+app.use("/api/ao-postes", aoPostesRouter);
 app.use("/api/suivi-administratif", fichierRouter(prisma.suiviAdministratif, {
   routeSuffix: "/confirmation-fichier",
   nomField: "confirmationFichierNom",

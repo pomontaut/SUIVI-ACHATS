@@ -58,4 +58,13 @@ export const api = {
   aoSujets: () => request<import("./types").AoSujet[]>("/ao-sujets"),
   updateAoSujet: (cle: string, data: { statutCommande?: string | null; numCmd?: string | null }) =>
     request<import("./types").AoSujet>(`/ao-sujets/${encodeURIComponent(cle)}`, { method: "PUT", body: JSON.stringify(data) }),
+  aoPostes: (sujetCle: string) =>
+    request<{ postes: import("./types").AoPoste[]; montants: import("./types").AoPosteMontant[] }>(`/ao-postes?sujetCle=${encodeURIComponent(sujetCle)}`),
+  addAoPoste: (data: { sujetCle: string; reference?: string | null; libelle?: string | null; budget?: string | null }) =>
+    request<import("./types").AoPoste>("/ao-postes", { method: "POST", body: JSON.stringify(data) }),
+  updateAoPoste: (id: string, data: { reference?: string | null; libelle?: string | null; budget?: string | null; ordre?: number }) =>
+    request<import("./types").AoPoste>(`/ao-postes/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  removeAoPoste: (id: string) => request<void>(`/ao-postes/${id}`, { method: "DELETE" }),
+  updateAoPosteMontant: (posteId: string, appelOffreId: string, montant: string | null) =>
+    request<import("./types").AoPosteMontant>(`/ao-postes/${posteId}/montant/${appelOffreId}`, { method: "PUT", body: JSON.stringify({ montant }) }),
 };
