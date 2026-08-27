@@ -479,7 +479,7 @@ function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGrou
   const cheapest = offres.find((o) => !Number.isNaN(o.montant))?.montant;
 
   function exportTco() {
-    const sheets = [
+    const sheets: { name: string; rows: Record<string, string | number>[] }[] = [
       {
         name: "Comparatif financier",
         rows: offres.map(({ row, montant }) => ({
