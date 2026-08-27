@@ -539,16 +539,25 @@ export interface RatioSeuilMonthPoint {
   countAbove: number;
   montantBelow: number;
   montantAbove: number;
-  pctCountBelow: number;
-  pctMontantBelow: number;
+  // null = aucune commande ce mois-là (à distinguer d'un ratio réellement à 0%)
+  pctCountBelow: number | null;
+  pctMontantBelow: number | null;
 }
 
 /** Évolution sur N mois du ratio commandes < seuil vs reste, pour repérer une
- * dérive de la dépense hors des sujets suivis (nombre et montant). */
+ * dérive de la dépense hors des sujets suivis (nombre et montant).
+ *
+ * Le mois en cours est exclu : ses données sont par nature partielles (on
+ * n'est qu'au début ou au milieu du mois), ce qui produit un ratio non
+ * représentatif et trompeur sur seulement 2-3 commandes passées depuis le
+ * 1er. La fenêtre porte donc sur les N derniers mois CIVILS COMPLETS. Un
+ * mois sans aucune commande retourne un pourcentage null (point non tracé)
+ * plutôt que 0%, pour ne pas laisser croire que 0% des commandes de ce
+ * mois étaient sous le seuil alors qu'il n'y en a simplement eu aucune. */
 export function ratioSeuilEvolution(operations: Operation[], months = 6, seuil = 5000): RatioSeuilMonthPoint[] {
   const now = new Date();
   const keys: { key: string; label: string }[] = [];
-  for (let i = months - 1; i >= 0; i--) {
+  for (let i = months; i >= 1; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const label = d.toLocaleDateString("fr-CH", { month: "short", year: "2-digit" });
@@ -569,8 +578,8 @@ export function ratioSeuilEvolution(operations: Operation[], months = 6, seuil =
     const totalMontant = montantBelow + montantAbove;
     return {
       monthKey: key, label, countBelow, countAbove, montantBelow, montantAbove,
-      pctCountBelow: totalCount > 0 ? Math.round((countBelow / totalCount) * 100) : 0,
-      pctMontantBelow: totalMontant > 0 ? Math.round((montantBelow / totalMontant) * 100) : 0,
+      pctCountBelow: totalCount > 0 ? Math.round((countBelow / totalCount) * 100) : null,
+      pctMontantBelow: totalMontant > 0 ? Math.round((montantBelow / totalMontant) * 100) : null,
     };
   });
 }
