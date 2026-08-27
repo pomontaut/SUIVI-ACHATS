@@ -7,6 +7,7 @@ import { EmptyLine } from "../components/dashboardUi";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import { dateVal } from "../lib/tableFilter";
+import { exportSheetsToExcel } from "../lib/excelExport";
 import { api } from "../api";
 import type { AoSujet, AppelOffre } from "../types";
 
@@ -472,10 +473,40 @@ function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGrou
     });
   const cheapest = offres.find((o) => !Number.isNaN(o.montant))?.montant;
 
+  function exportTco() {
+    exportSheetsToExcel(
+      [
+        {
+          name: "Comparatif financier",
+          rows: offres.map(({ row, montant }) => ({
+            Fournisseur: row.fournisseur ?? "",
+            "Offre HT (CHF)": row.offreFournisseur ?? "",
+            "Écart vs moins cher (CHF)": !Number.isNaN(montant) && cheapest !== undefined && montant > cheapest ? montant - cheapest : "",
+            Statut: row.statut ?? "",
+            Validation: row.validation ?? "",
+          })),
+        },
+        {
+          name: "Comparatif technique",
+          rows: groupe.rows.map((row) => ({
+            Fournisseur: row.fournisseur ?? "",
+            "Notes techniques / logistiques": row.comparatifTechnique ?? "",
+          })),
+        },
+      ],
+      `TCO-${groupe.numeroAO}-${groupe.chant || "sanschantier"}`,
+    );
+  }
+
   return (
-    <Modal title={`TCO — AO ${groupe.numeroAO} — ${groupe.nom}${groupe.chant ? ` (chantier ${groupe.chant})` : ""}`} onClose={onClose}>
-      <div className="max-w-none w-[70vw] max-h-[75vh] overflow-auto -m-4 p-4">
-        <p className="text-xs text-slate-500 mb-3">{groupe.prec}</p>
+    <Modal wide title={`TCO — AO ${groupe.numeroAO} — ${groupe.nom}${groupe.chant ? ` (chantier ${groupe.chant})` : ""}`} onClose={onClose}>
+      <div className="max-h-[75vh] overflow-auto -m-4 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-slate-500">{groupe.prec}</p>
+          <button className="text-xs text-indigo-600 hover:underline whitespace-nowrap" onClick={exportTco}>
+            ⬇ Exporter en Excel
+          </button>
+        </div>
         <h4 className="text-xs font-semibold uppercase text-slate-400 mb-2">Comparatif financier (HT)</h4>
         <table className="w-full text-xs border-collapse mb-4">
           <thead>
