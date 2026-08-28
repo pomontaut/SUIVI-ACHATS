@@ -79,7 +79,10 @@ export function AppelsOffresPage() {
     ent: opts.ENTITES[0] ?? "",
   });
   const [search, setSearch] = useState("");
-  const [statutFilter, setStatutFilter] = useState<string | null>(null);
+  // Par défaut, n'afficher que les sujets actifs ("En cours") plutôt que
+  // tout mélanger avec les sujets déjà commandés ou annulés ; le bouton
+  // "Tous" reste disponible pour repasser en vue complète.
+  const [statutFilter, setStatutFilter] = useState<string | null>("En cours");
   const [tcoGroupKey, setTcoGroupKey] = useState<string | null>(null);
   const [aoSujets, setAoSujets] = useState<Map<string, AoSujet>>(new Map());
 
