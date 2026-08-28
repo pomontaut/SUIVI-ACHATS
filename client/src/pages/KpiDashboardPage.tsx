@@ -323,7 +323,7 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
         <Card title="Évolution du ratio sur 6 mois" subtitle="6 derniers mois, dont le mois en cours (marqué *, données partielles) — pour repérer une dérive de la dépense hors sujets suivis">
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <p className="text-[10px] uppercase text-slate-400 mb-1">En nombre de commandes</p>
+              <p className="text-[10px] uppercase text-slate-400 mb-1">% de commandes &lt; CHF {chf(ratio.seuil)} (en nombre)</p>
               <div className="h-64">
                 <Line
                   data={{
@@ -354,7 +354,7 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
               </div>
             </div>
             <div>
-              <p className="text-[10px] uppercase text-slate-400 mb-1">En montant</p>
+              <p className="text-[10px] uppercase text-slate-400 mb-1">% de la dépense &lt; CHF {chf(ratio.seuil)} (en montant)</p>
               <div className="h-64">
                 <Line
                   data={{
