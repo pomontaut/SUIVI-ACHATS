@@ -253,6 +253,7 @@ export function OperationsPage() {
         onAdd={add}
         searchFields={["nom", "dem", "chant", "fourn", "fournisseur", "prec"]}
         quickFilters={quickFilters}
+        defaultQuickFilter="Actif"
         extraToggle={{ label: "Masquer clôturés", active: hideClosed, onToggle: () => setHideClosed((h) => !h) }}
         rowClassName={(o) => (isClos(o.etape) ? "" : (PRIO_ROW_BORDER[operationPrio(o)] ?? ""))}
       />

@@ -113,6 +113,7 @@ export function LivraisonsPage() {
   ];
 
   const quickFilters: QuickFilter<Livraison>[] = [
+    { label: "Actif", predicate: (d) => livraisonCategorie(d.dateLivraison, d.dateLivraisonReelle) !== "livre" },
     { label: "En cours", predicate: (d) => livraisonCategorie(d.dateLivraison, d.dateLivraisonReelle) === "encours" },
     { label: "En retard", predicate: (d) => livraisonCategorie(d.dateLivraison, d.dateLivraisonReelle) === "retard" },
     { label: "Clôturés", predicate: (d) => livraisonCategorie(d.dateLivraison, d.dateLivraisonReelle) === "livre" },
@@ -136,6 +137,7 @@ export function LivraisonsPage() {
         addLabel="+ Ajouter une ligne manuelle"
         searchFields={["chant", "nom", "numCmd", "fournisseur", "prec"]}
         quickFilters={quickFilters}
+        defaultQuickFilter="Actif"
       />
     </div>
   );

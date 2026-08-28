@@ -66,6 +66,7 @@ export function NonConformitesPage() {
         onAdd={add}
         searchFields={["fournisseur", "nom", "chant", "ctx", "rem"]}
         quickFilters={quickFilters}
+        defaultQuickFilter="En cours"
       />
     </div>
   );
