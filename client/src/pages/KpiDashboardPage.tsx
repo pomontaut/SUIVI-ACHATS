@@ -63,6 +63,34 @@ const pctPointLabels = {
   },
 };
 
+/** Plugin local pour les histogrammes "total vs petites commandes" : affiche
+ * au-dessus de chaque barre bleue (dataset[1], les petites commandes) le %
+ * qu'elle représente par rapport à la barre brune du même mois (dataset[0],
+ * le total), pour lire le ratio directement sans survoler la barre. */
+const bluePctOnBar = {
+  id: "bluePctOnBar",
+  afterDatasetsDraw(chart: ChartJS) {
+    const totalDataset = chart.data.datasets[0];
+    const petitDataset = chart.data.datasets[1];
+    if (!totalDataset || !petitDataset) return;
+    const { ctx } = chart;
+    const meta = chart.getDatasetMeta(1);
+    meta.data.forEach((bar, i) => {
+      const total = Number(totalDataset.data[i]);
+      const petit = Number(petitDataset.data[i]);
+      if (!total || Number.isNaN(petit)) return;
+      const pct = Math.round((petit / total) * 100);
+      ctx.save();
+      ctx.fillStyle = "#185FA5";
+      ctx.font = "600 10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillText(`${pct}%`, bar.x, bar.y - 4);
+      ctx.restore();
+    });
+  },
+};
+
 const doughnutOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
 const barOpts = {
   responsive: true, maintainAspectRatio: false,
@@ -251,6 +279,10 @@ function KpiTile({ label, value, sub, color, small }: { label: string; value: st
 
 // ===== Ratio <5000 CHF =====
 
+function monthLabel(e: { label: string; isPartial: boolean }): string {
+  return e.isPartial ? `${e.label} *` : e.label;
+}
+
 function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof ratioSeuil>; evolution: ReturnType<typeof ratioSeuilEvolution> }) {
   return (
     <div className="grid md:grid-cols-2 gap-4">
@@ -288,14 +320,14 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
         </div>
       </Card>
       <div className="md:col-span-2">
-        <Card title="Évolution du ratio sur 6 mois" subtitle="6 derniers mois civils complets (mois en cours exclu, données partielles) — pour repérer une dérive de la dépense hors sujets suivis">
+        <Card title="Évolution du ratio sur 6 mois" subtitle="6 derniers mois, dont le mois en cours (marqué *, données partielles) — pour repérer une dérive de la dépense hors sujets suivis">
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <p className="text-[10px] uppercase text-slate-400 mb-1">En nombre de commandes</p>
               <div className="h-64">
                 <Line
                   data={{
-                    labels: evolution.map((e) => e.label),
+                    labels: evolution.map(monthLabel),
                     datasets: [
                       { label: `< ${chf(ratio.seuil)} CHF`, data: evolution.map((e) => e.pctCountBelow), borderColor: "#185FA5", backgroundColor: "#185FA5", tension: 0.3 },
                     ],
@@ -309,7 +341,8 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
                       tooltip: { callbacks: { label: (ctx) => {
                         const e = evolution[ctx.dataIndex];
                         if (e.pctCountBelow === null) return "Aucune commande ce mois-ci";
-                        return `${e.pctCountBelow}% des commandes (${e.countBelow} sur ${e.countBelow + e.countAbove})`;
+                        const partial = e.isPartial ? " (mois en cours, données partielles)" : "";
+                        return `${e.pctCountBelow}% des commandes (${e.countBelow} sur ${e.countBelow + e.countAbove})${partial}`;
                       } } },
                     },
                     scales: {
@@ -325,7 +358,7 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
               <div className="h-64">
                 <Line
                   data={{
-                    labels: evolution.map((e) => e.label),
+                    labels: evolution.map(monthLabel),
                     datasets: [
                       { label: `< ${chf(ratio.seuil)} CHF`, data: evolution.map((e) => e.pctMontantBelow), borderColor: "#0F6E56", backgroundColor: "#0F6E56", tension: 0.3 },
                     ],
@@ -339,7 +372,8 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
                       tooltip: { callbacks: { label: (ctx) => {
                         const e = evolution[ctx.dataIndex];
                         if (e.pctMontantBelow === null) return "Aucune commande ce mois-ci";
-                        return `${e.pctMontantBelow}% de la dépense (CHF ${chf(e.montantBelow)} sur CHF ${chf(e.montantBelow + e.montantAbove)})`;
+                        const partial = e.isPartial ? " (mois en cours, données partielles)" : "";
+                        return `${e.pctMontantBelow}% de la dépense (CHF ${chf(e.montantBelow)} sur CHF ${chf(e.montantBelow + e.montantAbove)})${partial}`;
                       } } },
                     },
                     scales: {
@@ -353,6 +387,7 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
           </div>
           <p className="text-[10px] text-slate-400 italic mt-1">
             Les deux courbes sont en % (nombre de commandes à gauche, montant CHF à droite) — un écart entre elles indique qu'une minorité de grosses commandes pèse plus lourd que leur nombre ne le suggère.
+            {evolution.some((e) => e.isPartial) && " * mois en cours, données partielles."}
           </p>
           <div className="overflow-auto mt-2">
             <table className="w-full text-[11px] border-collapse">
@@ -362,7 +397,7 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
               <tbody>
                 {evolution.map((e) => (
                   <tr key={e.monthKey} className="border-t border-slate-100">
-                    <td className="py-1 pr-2">{e.label}</td>
+                    <td className="py-1 pr-2">{monthLabel(e)}</td>
                     {e.countBelow + e.countAbove === 0 ? (
                       <td className="py-1 pr-2 text-right text-slate-400 italic" colSpan={3}>Aucune commande</td>
                     ) : (
@@ -382,18 +417,20 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
       </div>
 
       <div className="md:col-span-2">
-        <Card title="Commandes par mois : total vs petites commandes" subtitle={`Nombre de commandes par mois, total et < CHF ${chf(ratio.seuil)}`}>
+        <Card title="Commandes par mois : total vs petites commandes" subtitle={`Nombre de commandes par mois, total et < CHF ${chf(ratio.seuil)}${evolution.some((e) => e.isPartial) ? " (* mois en cours, données partielles)" : ""}`}>
           <div className="h-64">
             <Bar
               data={{
-                labels: evolution.map((e) => e.label),
+                labels: evolution.map(monthLabel),
                 datasets: [
                   { label: "Total commandes", data: evolution.map((e) => e.countBelow + e.countAbove), backgroundColor: "#854F0B" },
                   { label: `< CHF ${chf(ratio.seuil)}`, data: evolution.map((e) => e.countBelow), backgroundColor: "#185FA5" },
                 ],
               }}
+              plugins={[bluePctOnBar]}
               options={{
                 responsive: true, maintainAspectRatio: false,
+                layout: { padding: { top: 16 } },
                 plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10 } } } },
                 scales: {
                   x: { ticks: { font: { size: 10 } } },
@@ -422,7 +459,7 @@ function CumulRatioChart({ evolution, seuil }: { evolution: ReturnType<typeof ra
       cCountTotal += e.countBelow + e.countAbove;
       cMontantBelow += e.montantBelow;
       cMontantTotal += e.montantBelow + e.montantAbove;
-      return { label: e.label, cCountBelow, cCountTotal, cMontantBelow, cMontantTotal };
+      return { label: monthLabel(e), cCountBelow, cCountTotal, cMontantBelow, cMontantTotal };
     });
   }, [evolution]);
 
@@ -443,6 +480,7 @@ function CumulRatioChart({ evolution, seuil }: { evolution: ReturnType<typeof ra
   function barOptions(kind: "nombre" | "montant") {
     return {
       responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 16 } },
       plugins: { legend: { position: "bottom" as const, labels: { boxWidth: 10, font: { size: 10 } } } },
       scales: {
         x: { ticks: { font: { size: 10 } } },
@@ -458,7 +496,7 @@ function CumulRatioChart({ evolution, seuil }: { evolution: ReturnType<typeof ra
   return (
     <Card
       title="Cumul sur la période : total vs petites commandes"
-      subtitle="Nombre ou montant cumulé mois après mois, pour voir la tendance sur l'ensemble de la période"
+      subtitle={`Nombre ou montant cumulé mois après mois, pour voir la tendance sur l'ensemble de la période${evolution.some((e) => e.isPartial) ? " (* mois en cours, données partielles)" : ""}`}
       right={
         <div className="flex gap-1 shrink-0">
           {(["nombre", "montant", "both"] as const).map((m) => (
@@ -477,15 +515,15 @@ function CumulRatioChart({ evolution, seuil }: { evolution: ReturnType<typeof ra
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <p className="text-[10px] uppercase text-slate-400 mb-1">En nombre</p>
-            <div className="h-64"><Bar data={barData("nombre")} options={barOptions("nombre")} /></div>
+            <div className="h-64"><Bar data={barData("nombre")} options={barOptions("nombre")} plugins={[bluePctOnBar]} /></div>
           </div>
           <div>
             <p className="text-[10px] uppercase text-slate-400 mb-1">En montant</p>
-            <div className="h-64"><Bar data={barData("montant")} options={barOptions("montant")} /></div>
+            <div className="h-64"><Bar data={barData("montant")} options={barOptions("montant")} plugins={[bluePctOnBar]} /></div>
           </div>
         </div>
       ) : (
-        <div className="h-64"><Bar data={barData(mode)} options={barOptions(mode)} /></div>
+        <div className="h-64"><Bar data={barData(mode)} options={barOptions(mode)} plugins={[bluePctOnBar]} /></div>
       )}
     </Card>
   );

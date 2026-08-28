@@ -3,7 +3,12 @@
 // retard, jamais pour forcer un format de saisie.
 export function parseFrDate(s: string | null | undefined): Date | null {
   if (!s) return null;
-  const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  // Accepte "/" et "." comme séparateur (les deux se rencontrent dans les
+  // données saisies/importées, ex: 20.08.2026 vs 20/08/2026) - sinon les
+  // dates au format à points sont silencieusement ignorées par tout calcul
+  // basé sur cette fonction (priorités, regroupements mensuels du tableau
+  // de bord...) sans qu'aucune erreur ne le signale.
+  const m = s.trim().match(/^(\d{1,2})[./](\d{1,2})[./](\d{2,4})$/);
   if (!m) return null;
   const [, dd, mm, yyRaw] = m;
   const yy = yyRaw.length === 2 ? 2000 + Number(yyRaw) : Number(yyRaw);
