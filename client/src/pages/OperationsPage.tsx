@@ -120,7 +120,28 @@ export function OperationsPage() {
     { key: "launch", label: "Lancement", type: "date", width: "80px" },
     { key: "retour", label: "Retour", type: "date", width: "80px" },
     { key: "retourMax", label: "Retour max", type: "date", width: "80px" },
-    { key: "dateCmd", label: "Date cmd", type: "date", width: "80px" },
+    {
+      key: "dateCmd",
+      label: "Date cmd",
+      type: "date",
+      width: "80px",
+      // Une date de commande n'a de sens que pour les sujets exploitation
+      // (les autres types - soumission, Suivi SLA, Transverse... - ne
+      // passent pas de commande à proprement parler) : affiché en lecture
+      // seule "N/A" pour ne pas laisser croire qu'une saisie est attendue.
+      render: (o) =>
+        isAutoPrioType(o.type) !== "exploitation" ? (
+          <span className="text-slate-400 italic" title="Non applicable (uniquement pour les sujets exploitation)">N/A</span>
+        ) : (
+          <input
+            className="input"
+            defaultValue={o.dateCmd ?? ""}
+            placeholder="jj/mm/aa"
+            onBlur={(e) => { if (e.target.value !== (o.dateCmd ?? "")) update(o.id, { dateCmd: e.target.value }); }}
+          />
+        ),
+      filterValue: (o) => (isAutoPrioType(o.type) !== "exploitation" ? "N/A" : (o.dateCmd ?? "")),
+    },
     { key: "dateLivraison", label: "Date livraison", type: "date", width: "90px" },
     { key: "numCmd", label: "N° cmd", width: "80px" },
     {
