@@ -40,6 +40,11 @@ interface EditableTableProps<T extends { id: string }> {
   searchFields?: (keyof T)[];
   /** Boutons de filtre rapide affichés au-dessus du tableau ("Tous" est ajouté automatiquement en premier). */
   quickFilters?: QuickFilter<T>[];
+  /** Libellé du filtre rapide sélectionné par défaut à l'ouverture de la
+   * page (ex: "Actif"), pour éviter d'afficher "Tous" - y compris les
+   * sujets clôturés - à chaque changement d'onglet. Ignoré si le libellé
+   * ne correspond à aucun quickFilter. */
+  defaultQuickFilter?: string;
   /** Interrupteur additionnel combinable avec le filtre rapide (ex: "Masquer clôturés"). */
   extraToggle?: { label: string; active: boolean; onToggle: () => void };
   /** Classes CSS additionnelles par ligne (ex: liseré coloré selon l'urgence). */
@@ -61,12 +66,17 @@ export function EditableTable<T extends { id: string }>({
   addLabel = "+ Ajouter une ligne",
   searchFields,
   quickFilters,
+  defaultQuickFilter,
   extraToggle,
   rowClassName,
 }: EditableTableProps<T>) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [activeQuick, setActiveQuick] = useState<number | null>(null);
+  const [activeQuick, setActiveQuick] = useState<number | null>(() => {
+    if (!defaultQuickFilter || !quickFilters) return null;
+    const i = quickFilters.findIndex((q) => q.label === defaultQuickFilter);
+    return i >= 0 ? i : null;
+  });
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
   const [colFilters, setColFilters] = useState<Record<string, ColFilterValue>>({});
   const [openFilter, setOpenFilter] = useState<string | null>(null);

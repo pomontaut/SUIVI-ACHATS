@@ -55,6 +55,7 @@ export function TodoPage() {
         onAdd={add}
         searchFields={["qui", "quoi", "action"]}
         quickFilters={quickFilters}
+        defaultQuickFilter="Actif"
         rowClassName={(d) => ((d.statut ?? "Actif") === "Clôturé" ? "" : (PRIO_ROW_BORDER[d.prio ?? ""] ?? ""))}
       />
     </div>

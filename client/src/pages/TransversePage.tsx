@@ -74,6 +74,7 @@ export function TransversePage() {
         onAdd={add}
         searchFields={["nom", "dem", "prec", "action"]}
         quickFilters={quickFilters}
+        defaultQuickFilter="Actif"
         rowClassName={(d) => (isClosTr(d) ? "" : (PRIO_ROW_BORDER[d.prio ?? ""] ?? ""))}
       />
     </div>
