@@ -254,6 +254,9 @@ function KpiTile({ label, value, sub, color, small }: { label: string; value: st
 function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof ratioSeuil>; evolution: ReturnType<typeof ratioSeuilEvolution> }) {
   return (
     <div className="grid md:grid-cols-2 gap-4">
+      <p className="md:col-span-2 text-xs text-slate-500">
+        Règle : une commande est considérée <strong className="text-slate-700">« petite »</strong> si son montant est strictement inférieur à <strong className="text-slate-700">CHF {chf(ratio.seuil)}</strong> — seuil utilisé pour tous les indicateurs de cette section.
+      </p>
       <ChartCard
         title={`Commandes < ${chf(ratio.seuil)} CHF vs le reste`}
         subtitle="En nombre et en montant"
@@ -287,61 +290,65 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
       <div className="md:col-span-2">
         <Card title="Évolution du ratio sur 6 mois" subtitle="6 derniers mois civils complets (mois en cours exclu, données partielles) — pour repérer une dérive de la dépense hors sujets suivis">
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="h-64">
+            <div>
               <p className="text-[10px] uppercase text-slate-400 mb-1">En nombre de commandes</p>
-              <Line
-                data={{
-                  labels: evolution.map((e) => e.label),
-                  datasets: [
-                    { label: `< ${chf(ratio.seuil)} CHF`, data: evolution.map((e) => e.pctCountBelow), borderColor: "#185FA5", backgroundColor: "#185FA5", tension: 0.3 },
-                  ],
-                }}
-                plugins={[pctPointLabels]}
-                options={{
-                  responsive: true, maintainAspectRatio: false,
-                  layout: { padding: { top: 16 } },
-                  plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: (ctx) => {
-                      const e = evolution[ctx.dataIndex];
-                      if (e.pctCountBelow === null) return "Aucune commande ce mois-ci";
-                      return `${e.pctCountBelow}% des commandes (${e.countBelow} sur ${e.countBelow + e.countAbove})`;
-                    } } },
-                  },
-                  scales: {
-                    x: { ticks: { autoSkip: false, maxRotation: 0, font: { size: 10 } } },
-                    y: { min: 0, max: 100, title: { display: true, text: "% du nombre de commandes" }, ticks: { callback: (v) => `${v}%` } },
-                  },
-                }}
-              />
+              <div className="h-64">
+                <Line
+                  data={{
+                    labels: evolution.map((e) => e.label),
+                    datasets: [
+                      { label: `< ${chf(ratio.seuil)} CHF`, data: evolution.map((e) => e.pctCountBelow), borderColor: "#185FA5", backgroundColor: "#185FA5", tension: 0.3 },
+                    ],
+                  }}
+                  plugins={[pctPointLabels]}
+                  options={{
+                    responsive: true, maintainAspectRatio: false,
+                    layout: { padding: { top: 16 } },
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: { callbacks: { label: (ctx) => {
+                        const e = evolution[ctx.dataIndex];
+                        if (e.pctCountBelow === null) return "Aucune commande ce mois-ci";
+                        return `${e.pctCountBelow}% des commandes (${e.countBelow} sur ${e.countBelow + e.countAbove})`;
+                      } } },
+                    },
+                    scales: {
+                      x: { ticks: { autoSkip: false, maxRotation: 0, font: { size: 10 } } },
+                      y: { min: 0, max: 100, title: { display: true, text: "% du nombre de commandes" }, ticks: { callback: (v) => `${v}%` } },
+                    },
+                  }}
+                />
+              </div>
             </div>
-            <div className="h-64">
+            <div>
               <p className="text-[10px] uppercase text-slate-400 mb-1">En montant</p>
-              <Line
-                data={{
-                  labels: evolution.map((e) => e.label),
-                  datasets: [
-                    { label: `< ${chf(ratio.seuil)} CHF`, data: evolution.map((e) => e.pctMontantBelow), borderColor: "#0F6E56", backgroundColor: "#0F6E56", tension: 0.3 },
-                  ],
-                }}
-                plugins={[pctPointLabels]}
-                options={{
-                  responsive: true, maintainAspectRatio: false,
-                  layout: { padding: { top: 16 } },
-                  plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: (ctx) => {
-                      const e = evolution[ctx.dataIndex];
-                      if (e.pctMontantBelow === null) return "Aucune commande ce mois-ci";
-                      return `${e.pctMontantBelow}% de la dépense (CHF ${chf(e.montantBelow)} sur CHF ${chf(e.montantBelow + e.montantAbove)})`;
-                    } } },
-                  },
-                  scales: {
-                    x: { ticks: { autoSkip: false, maxRotation: 0, font: { size: 10 } } },
-                    y: { min: 0, max: 100, title: { display: true, text: "% du montant total" }, ticks: { callback: (v) => `${v}%` } },
-                  },
-                }}
-              />
+              <div className="h-64">
+                <Line
+                  data={{
+                    labels: evolution.map((e) => e.label),
+                    datasets: [
+                      { label: `< ${chf(ratio.seuil)} CHF`, data: evolution.map((e) => e.pctMontantBelow), borderColor: "#0F6E56", backgroundColor: "#0F6E56", tension: 0.3 },
+                    ],
+                  }}
+                  plugins={[pctPointLabels]}
+                  options={{
+                    responsive: true, maintainAspectRatio: false,
+                    layout: { padding: { top: 16 } },
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: { callbacks: { label: (ctx) => {
+                        const e = evolution[ctx.dataIndex];
+                        if (e.pctMontantBelow === null) return "Aucune commande ce mois-ci";
+                        return `${e.pctMontantBelow}% de la dépense (CHF ${chf(e.montantBelow)} sur CHF ${chf(e.montantBelow + e.montantAbove)})`;
+                      } } },
+                    },
+                    scales: {
+                      x: { ticks: { autoSkip: false, maxRotation: 0, font: { size: 10 } } },
+                      y: { min: 0, max: 100, title: { display: true, text: "% du montant total" }, ticks: { callback: (v) => `${v}%` } },
+                    },
+                  }}
+                />
+              </div>
             </div>
           </div>
           <p className="text-[10px] text-slate-400 italic mt-1">
@@ -373,7 +380,114 @@ function RatioSeuilSection({ ratio, evolution }: { ratio: ReturnType<typeof rati
           </div>
         </Card>
       </div>
+
+      <div className="md:col-span-2">
+        <Card title="Commandes par mois : total vs petites commandes" subtitle={`Nombre de commandes par mois, total et < CHF ${chf(ratio.seuil)}`}>
+          <div className="h-64">
+            <Bar
+              data={{
+                labels: evolution.map((e) => e.label),
+                datasets: [
+                  { label: "Total commandes", data: evolution.map((e) => e.countBelow + e.countAbove), backgroundColor: "#854F0B" },
+                  { label: `< CHF ${chf(ratio.seuil)}`, data: evolution.map((e) => e.countBelow), backgroundColor: "#185FA5" },
+                ],
+              }}
+              options={{
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10 } } } },
+                scales: {
+                  x: { ticks: { font: { size: 10 } } },
+                  y: { beginAtZero: true, title: { display: true, text: "Nombre de commandes" }, ticks: { precision: 0 } },
+                },
+              }}
+            />
+          </div>
+        </Card>
+      </div>
+
+      <div className="md:col-span-2">
+        <CumulRatioChart evolution={evolution} seuil={ratio.seuil} />
+      </div>
     </div>
+  );
+}
+
+function CumulRatioChart({ evolution, seuil }: { evolution: ReturnType<typeof ratioSeuilEvolution>; seuil: number }) {
+  const [mode, setMode] = useState<"nombre" | "montant" | "both">("nombre");
+
+  const cumul = useMemo(() => {
+    let cCountBelow = 0, cCountTotal = 0, cMontantBelow = 0, cMontantTotal = 0;
+    return evolution.map((e) => {
+      cCountBelow += e.countBelow;
+      cCountTotal += e.countBelow + e.countAbove;
+      cMontantBelow += e.montantBelow;
+      cMontantTotal += e.montantBelow + e.montantAbove;
+      return { label: e.label, cCountBelow, cCountTotal, cMontantBelow, cMontantTotal };
+    });
+  }, [evolution]);
+
+  function barData(kind: "nombre" | "montant") {
+    return {
+      labels: cumul.map((c) => c.label),
+      datasets: kind === "nombre"
+        ? [
+            { label: "Total cumulé", data: cumul.map((c) => c.cCountTotal), backgroundColor: "#854F0B" },
+            { label: `< CHF ${chf(seuil)} cumulé`, data: cumul.map((c) => c.cCountBelow), backgroundColor: "#185FA5" },
+          ]
+        : [
+            { label: "Total cumulé (CHF)", data: cumul.map((c) => c.cMontantTotal), backgroundColor: "#854F0B" },
+            { label: `< CHF ${chf(seuil)} cumulé (CHF)`, data: cumul.map((c) => c.cMontantBelow), backgroundColor: "#185FA5" },
+          ],
+    };
+  }
+  function barOptions(kind: "nombre" | "montant") {
+    return {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" as const, labels: { boxWidth: 10, font: { size: 10 } } } },
+      scales: {
+        x: { ticks: { font: { size: 10 } } },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: kind === "nombre" ? "Nombre cumulé" : "Montant cumulé (CHF)" },
+          ticks: kind === "montant" ? { callback: (v: number | string) => chf(Number(v)) } : { precision: 0 },
+        },
+      },
+    };
+  }
+
+  return (
+    <Card
+      title="Cumul sur la période : total vs petites commandes"
+      subtitle="Nombre ou montant cumulé mois après mois, pour voir la tendance sur l'ensemble de la période"
+      right={
+        <div className="flex gap-1 shrink-0">
+          {(["nombre", "montant", "both"] as const).map((m) => (
+            <button
+              key={m}
+              className={`text-[10px] px-2 py-1 rounded whitespace-nowrap ${mode === m ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              onClick={() => setMode(m)}
+            >
+              {m === "nombre" ? "Nombre" : m === "montant" ? "Montant" : "Les deux"}
+            </button>
+          ))}
+        </div>
+      }
+    >
+      {mode === "both" ? (
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-[10px] uppercase text-slate-400 mb-1">En nombre</p>
+            <div className="h-64"><Bar data={barData("nombre")} options={barOptions("nombre")} /></div>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase text-slate-400 mb-1">En montant</p>
+            <div className="h-64"><Bar data={barData("montant")} options={barOptions("montant")} /></div>
+          </div>
+        </div>
+      ) : (
+        <div className="h-64"><Bar data={barData(mode)} options={barOptions(mode)} /></div>
+      )}
+    </Card>
   );
 }
 
