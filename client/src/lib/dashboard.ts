@@ -438,12 +438,23 @@ export interface TopPrioItem {
   isExploitation: boolean;
 }
 
+/** Nombre de jours calendaires entre l'échéance et aujourd'hui (positif =
+ * dépassée, 0 = aujourd'hui, négatif = à venir) ; null si pas d'échéance. */
+function joursDepasses(echeance: string | null): number | null {
+  const d = parseFrDate(echeance);
+  if (!d) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  return Math.round((today.getTime() - d.getTime()) / 86_400_000);
+}
+
 /**
  * Combine Opérationnel/Transverse/To do en une seule liste triée par
- * urgence réelle : un sujet "sur le point de se terminer" (échéance
- * dépassée ou à J-1, tous types confondus) passe toujours en premier ;
- * sinon les sujets exploitation priment sur tout le reste ; à égalité, tri
- * par priorité (P0 → P4).
+ * urgence réelle : les sujets dont l'échéance est dépassée ou tombe
+ * aujourd'hui passent toujours en premier, classés du plus en retard au
+ * moins en retard ; sinon les sujets exploitation priment sur tout le
+ * reste ; à égalité, tri par priorité (P0 → P4).
  */
 export function top10Priorites(operations: Operation[], transverses: Transverse[], todos: Todo[]): TopPrioItem[] {
   const opItems: TopPrioItem[] = operations
@@ -497,9 +508,22 @@ export function top10Priorites(operations: Operation[], transverses: Transverse[
       isExploitation: false,
     }));
 
-  const tier = (it: TopPrioItem) => (it.warning ? 0 : it.isExploitation ? 1 : 2);
+  const tier = (it: TopPrioItem) => {
+    const jours = joursDepasses(it.echeance);
+    if (jours !== null && jours >= 0) return 0; // échéance dépassée ou aujourd'hui
+    return it.isExploitation ? 1 : 2;
+  };
   const all = [...opItems, ...trItems, ...tdItems];
-  all.sort((a, b) => tier(a) - tier(b) || prioRank(a.prio) - prioRank(b.prio));
+  all.sort((a, b) => {
+    const ta = tier(a);
+    const tb = tier(b);
+    if (ta !== tb) return ta - tb;
+    if (ta === 0) {
+      const diff = (joursDepasses(b.echeance) ?? 0) - (joursDepasses(a.echeance) ?? 0);
+      if (diff !== 0) return diff; // le plus en retard en premier
+    }
+    return prioRank(a.prio) - prioRank(b.prio);
+  });
 
   return all.slice(0, 10);
 }
