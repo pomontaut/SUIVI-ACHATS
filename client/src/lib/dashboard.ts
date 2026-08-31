@@ -450,11 +450,13 @@ function joursDepasses(echeance: string | null): number | null {
 }
 
 /**
- * Combine Opérationnel/Transverse/To do en une seule liste triée par
- * urgence réelle : les sujets dont l'échéance est dépassée ou tombe
- * aujourd'hui passent toujours en premier, classés du plus en retard au
- * moins en retard ; sinon les sujets exploitation priment sur tout le
- * reste ; à égalité, tri par priorité (P0 → P4).
+ * Combine Opérationnel/Transverse/To do en une seule liste triée d'abord
+ * par priorité (P0 → P4) - un sujet noté P2 ne doit jamais passer devant
+ * un P0, même très en retard, sinon un sujet secondaire oublié depuis des
+ * mois écrase les vraies urgences opérationnelles en tête de liste.
+ * À priorité égale seulement, l'échéance sert de départage : dépassée ou
+ * tombant aujourd'hui en premier (la plus en retard d'abord), puis les
+ * sujets exploitation.
  */
 export function top10Priorites(operations: Operation[], transverses: Transverse[], todos: Todo[]): TopPrioItem[] {
   const opItems: TopPrioItem[] = operations
@@ -508,21 +510,17 @@ export function top10Priorites(operations: Operation[], transverses: Transverse[
       isExploitation: false,
     }));
 
-  const tier = (it: TopPrioItem) => {
-    const jours = joursDepasses(it.echeance);
-    if (jours !== null && jours >= 0) return 0; // échéance dépassée ou aujourd'hui
-    return it.isExploitation ? 1 : 2;
-  };
   const all = [...opItems, ...trItems, ...tdItems];
   all.sort((a, b) => {
-    const ta = tier(a);
-    const tb = tier(b);
-    if (ta !== tb) return ta - tb;
-    if (ta === 0) {
-      const diff = (joursDepasses(b.echeance) ?? 0) - (joursDepasses(a.echeance) ?? 0);
-      if (diff !== 0) return diff; // le plus en retard en premier
-    }
-    return prioRank(a.prio) - prioRank(b.prio);
+    const pr = prioRank(a.prio) - prioRank(b.prio);
+    if (pr !== 0) return pr;
+    const ja = joursDepasses(a.echeance);
+    const jb = joursDepasses(b.echeance);
+    const aOverdue = ja !== null && ja >= 0;
+    const bOverdue = jb !== null && jb >= 0;
+    if (aOverdue !== bOverdue) return aOverdue ? -1 : 1; // dépassé/aujourd'hui d'abord, à priorité égale
+    if (aOverdue && bOverdue) return (jb ?? 0) - (ja ?? 0); // le plus en retard d'abord
+    return a.isExploitation === b.isExploitation ? 0 : a.isExploitation ? -1 : 1;
   });
 
   return all.slice(0, 10);

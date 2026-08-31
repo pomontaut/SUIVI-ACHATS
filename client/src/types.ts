@@ -166,6 +166,16 @@ export interface SuiviAdministratif extends Base {
   blFichierUrl: string | null;
 }
 
+export interface CahierDesCharges extends Base {
+  groupeMarchandise: string | null;
+  fourniture: string | null;
+  precision: string | null;
+  question: string | null;
+  reponseAttendue: string | null;
+  obligatoire: string | null;
+  rem: string | null;
+}
+
 export interface Fournisseur {
   id: string;
   nom: string;

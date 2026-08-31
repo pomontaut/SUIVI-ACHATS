@@ -243,6 +243,25 @@ model AoPosteMontant {
   @@unique([posteId, appelOffreId])
 }
 
+// Cahier des charges : base de connaissance des questions à poser aux
+// demandeurs pour chaque type de fourniture/prestation, indépendante du
+// suivi opérationnel (aucune synchro automatique). Le "Groupe marchandise"
+// reprend la même liste que la colonne Fournitures de l'Opérationnel, et la
+// "Précision" propose les intitulés déjà utilisés sur des sujets
+// exploitation, pour rattacher une question à un objet réel déjà rencontré.
+model CahierDesCharges {
+  id             String   @id @default(cuid())
+  groupeMarchandise String?
+  fourniture     String?
+  precision      String?
+  question       String?
+  reponseAttendue String?
+  obligatoire    String?  @default("Non")
+  rem            String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 // Référentiel fournisseurs (import Abacus / ERP + ajouts manuels)
 model Fournisseur {
   id        String   @id @default(cuid())
