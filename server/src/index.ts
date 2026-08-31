@@ -27,6 +27,7 @@ app.use(express.json());
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/api/operations", crudRouter(prisma.operation));
+app.use("/api/cahier-des-charges", crudRouter(prisma.cahierDesCharges));
 app.use("/api/transverses", crudRouter(prisma.transverse));
 app.use("/api/todos", crudRouter(prisma.todo));
 app.use("/api/non-conformites", crudRouter(prisma.nonConformite));
