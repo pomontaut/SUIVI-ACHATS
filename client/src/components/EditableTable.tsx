@@ -480,15 +480,49 @@ function Cell<T>({
   }
 
   return (
-    <input
-      className="input"
-      type="text"
-      placeholder={col.type === "date" ? "jj/mm/aa" : undefined}
+    <AutoTextArea
       value={local}
-      onChange={(e) => setLocal(e.target.value)}
+      placeholder={col.type === "date" ? "jj/mm/aa" : undefined}
+      onChange={setLocal}
       onBlur={() => {
         if (local !== (value == null ? "" : String(value))) onChange(local);
       }}
+    />
+  );
+}
+
+/** Textarea qui grandit (hauteur + largeur du texte visible) au fil de la
+ * saisie au lieu de tronquer le contenu dans une ligne fixe, pour que le
+ * texte tapé reste toujours lisible sans avoir à élargir la colonne. */
+function AutoTextArea({
+  value,
+  placeholder,
+  onChange,
+  onBlur,
+}: {
+  value: string;
+  placeholder?: string;
+  onChange: (v: string) => void;
+  onBlur: () => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      className="input resize-none overflow-hidden leading-snug break-words"
+      rows={1}
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur}
     />
   );
 }
