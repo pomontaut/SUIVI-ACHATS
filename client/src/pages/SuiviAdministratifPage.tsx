@@ -85,7 +85,9 @@ export function SuiviAdministratifPage() {
   ];
 
   const quickFilters: QuickFilter<SuiviAdministratif>[] = [
-    { label: "Confirmation manquante", predicate: (d) => !(d.confirmation ?? "").trim() },
+    // Une confirmation jointe en pièce jointe compte comme faite, même si le
+    // champ texte (référence libre) est resté vide.
+    { label: "Confirmation manquante", predicate: (d) => !(d.confirmation ?? "").trim() && !d.confirmationFichierNom },
   ];
 
   if (loading) return <p className="p-4 text-slate-500">Chargement…</p>;
