@@ -71,19 +71,30 @@ export interface DemandeurRow {
   montant: number; // montant total commandé
   countAvecMontant: number; // nombre de commandes effectivement chiffrées, pour le panier moyen
   panierMoyen: number; // montant / countAvecMontant (0 si aucune commande chiffrée)
+  gain: number; // gain/perte cumulé (même calcul que kpis())
+  hasGain: boolean; // false si aucun sujet de ce demandeur n'a de budget/gain renseigné -> afficher N/A
 }
 
 /** Répartition par demandeur (nombre de sujets, montant total, panier
- * moyen) - permet par exemple de montrer à un directeur d'entité ce qui a
- * été traité pour ses demandeurs. Triée par nombre de sujets décroissant. */
-export function demandeurBreakdown(operations: Operation[]): DemandeurRow[] {
-  const map = new Map<string, { count: number; montant: number; countAvecMontant: number }>();
+ * moyen, gain) - permet par exemple de montrer à un directeur d'entité ce
+ * qui a été traité pour ses demandeurs. Ne retient que les sujets
+ * exploitation (et variantes) et Devis PV - les autres types (soumission,
+ * Suivi SLA...) ne relèvent pas de ce qu'un demandeur a "commandé" au sens
+ * de cette vue. Triée par nombre de sujets décroissant. */
+export function demandeurBreakdown(allOperations: Operation[]): DemandeurRow[] {
+  const operations = allOperations.filter((o) => isAutoPrioType(o.type) === "exploitation" || o.type === "Devis PV");
+  const map = new Map<string, { count: number; montant: number; countAvecMontant: number; gain: number; hasGain: boolean }>();
   for (const o of operations) {
     const key = (o.dem ?? "").trim() || "Non renseigné";
-    const e = map.get(key) ?? { count: 0, montant: 0, countAvecMontant: 0 };
+    const e = map.get(key) ?? { count: 0, montant: 0, countAvecMontant: 0, gain: 0, hasGain: false };
     e.count += 1;
     const m = num(o.montant);
     if (m > 0) { e.montant += m; e.countAvecMontant += 1; }
+    const b = numOrNaN(o.budget);
+    const mm = numOrNaN(o.montant);
+    const g = numOrNaN(o.gain);
+    if (!Number.isNaN(b) && b > 0 && !Number.isNaN(mm) && mm > 0) { e.gain += mm - b; e.hasGain = true; }
+    else if (!Number.isNaN(g)) { e.gain += g; e.hasGain = true; }
     map.set(key, e);
   }
   return [...map.entries()]
@@ -93,6 +104,8 @@ export function demandeurBreakdown(operations: Operation[]): DemandeurRow[] {
       montant: v.montant,
       countAvecMontant: v.countAvecMontant,
       panierMoyen: v.countAvecMontant > 0 ? v.montant / v.countAvecMontant : 0,
+      gain: v.gain,
+      hasGain: v.hasGain,
     }))
     .sort((a, b) => b.count - a.count);
 }
