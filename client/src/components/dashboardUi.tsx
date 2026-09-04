@@ -54,7 +54,7 @@ export function MiniStat({ label, value, color }: { label: string; value: string
 
 /** Légende "Label : n (pct%)" - utilisée sous les graphiques pour afficher
  * à la fois le nombre et le pourcentage, pas seulement une couleur. */
-export function LegendList({ items }: { items: { label: string; value: number; pct: number; color: string }[] }) {
+export function LegendList({ items }: { items: { label: string; value: number | string; pct: number; color: string }[] }) {
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600">
       {items.map((it) => (

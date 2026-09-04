@@ -142,7 +142,10 @@ export interface PertResult {
   count: number;
   pct: number;
   total: number;
+  color: string;
 }
+
+const COL_PERT = ["#185FA5", "#3B6D11", "#534AB7", "#854F0B", "#A32D2D", "#0F6E56", "#C2410C", "#0369A1", "#888780"];
 
 export function pertBreakdown(operations: Operation[], pertCats: Options["PERT_CATS"]): { rows: PertResult[]; totalCmd: number } {
   const cmdRows = operations.filter((o) => num(o.montant) > 0);
@@ -153,9 +156,9 @@ export function pertBreakdown(operations: Operation[], pertCats: Options["PERT_C
     entry.count++;
     entry.total += num(o.montant);
   }
-  const rows = pertCats.map((c) => {
+  const rows = pertCats.map((c, i) => {
     const e = byKey.get(c.key)!;
-    return { key: c.key, label: c.label, count: e.count, total: e.total, pct: cmdRows.length > 0 ? Math.round((e.count / cmdRows.length) * 100) : 0 };
+    return { key: c.key, label: c.label, count: e.count, total: e.total, pct: cmdRows.length > 0 ? Math.round((e.count / cmdRows.length) * 100) : 0, color: COL_PERT[i % COL_PERT.length] };
   });
   return { rows, totalCmd: cmdRows.length };
 }
