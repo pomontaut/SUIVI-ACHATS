@@ -65,6 +65,38 @@ export function fournitureBreakdown(operations: Operation[]): Bucket[] {
   return topN(c, 7, COL_FOURN);
 }
 
+export interface DemandeurRow {
+  dem: string;
+  count: number; // nombre de sujets traités par ce demandeur
+  montant: number; // montant total commandé
+  countAvecMontant: number; // nombre de commandes effectivement chiffrées, pour le panier moyen
+  panierMoyen: number; // montant / countAvecMontant (0 si aucune commande chiffrée)
+}
+
+/** Répartition par demandeur (nombre de sujets, montant total, panier
+ * moyen) - permet par exemple de montrer à un directeur d'entité ce qui a
+ * été traité pour ses demandeurs. Triée par montant décroissant. */
+export function demandeurBreakdown(operations: Operation[]): DemandeurRow[] {
+  const map = new Map<string, { count: number; montant: number; countAvecMontant: number }>();
+  for (const o of operations) {
+    const key = (o.dem ?? "").trim() || "Non renseigné";
+    const e = map.get(key) ?? { count: 0, montant: 0, countAvecMontant: 0 };
+    e.count += 1;
+    const m = num(o.montant);
+    if (m > 0) { e.montant += m; e.countAvecMontant += 1; }
+    map.set(key, e);
+  }
+  return [...map.entries()]
+    .map(([dem, v]) => ({
+      dem,
+      count: v.count,
+      montant: v.montant,
+      countAvecMontant: v.countAvecMontant,
+      panierMoyen: v.countAvecMontant > 0 ? v.montant / v.countAvecMontant : 0,
+    }))
+    .sort((a, b) => b.montant - a.montant);
+}
+
 export interface TrancheResult {
   lbl: string;
   col: string;

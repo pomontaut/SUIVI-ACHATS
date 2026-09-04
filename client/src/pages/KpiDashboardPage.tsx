@@ -17,6 +17,7 @@ import { api } from "../api";
 import {
   analyseDepense,
   dashLivraisons,
+  demandeurBreakdown,
   entiteBreakdown,
   etapeBreakdown,
   fournisseurDrilldown,
@@ -124,9 +125,9 @@ export function KpiDashboardPage() {
 }
 
 function KpiDashboardContent({
-  operations,
-  livraisons,
-  nonConformites,
+  operations: allOperations,
+  livraisons: allLivraisons,
+  nonConformites: allNonConformites,
   fournisseursManuel,
   updateOperation,
 }: {
@@ -137,6 +138,23 @@ function KpiDashboardContent({
   updateOperation: (id: string, patch: Partial<Operation>) => void;
 }) {
   const opts = useOptions();
+  // Filtre par entité : permet de n'afficher que les indicateurs d'une
+  // entité donnée (ex: pour montrer à un directeur d'entité ce qui a été
+  // traité pour la sienne), sans toucher aux calculs eux-mêmes qui
+  // continuent de raisonner sur les données déjà filtrées ci-dessous.
+  const [entiteFilter, setEntiteFilter] = useState<string | null>(null);
+  const operations = useMemo(
+    () => (entiteFilter ? allOperations.filter((o) => o.ent === entiteFilter) : allOperations),
+    [allOperations, entiteFilter],
+  );
+  const livraisons = useMemo(
+    () => (entiteFilter ? allLivraisons.filter((l) => l.ent === entiteFilter) : allLivraisons),
+    [allLivraisons, entiteFilter],
+  );
+  const nonConformites = useMemo(
+    () => (entiteFilter ? allNonConformites.filter((n) => n.ent === entiteFilter) : allNonConformites),
+    [allNonConformites, entiteFilter],
+  );
   const k = useMemo(() => kpis(operations), [operations]);
   const etapeData = useMemo(() => withPct(etapeBreakdown(operations)), [operations]);
   const entiteData = useMemo(() => withPct(entiteBreakdown(operations)), [operations]);
@@ -149,9 +167,34 @@ function KpiDashboardContent({
   const ratioEvol = useMemo(() => ratioSeuilEvolution(operations, 6), [operations]);
   const ts = useMemo(() => tauxService(livraisons), [livraisons]);
   const nouveauxFourn = useMemo(() => nouveauxFournisseursKpi(fournisseursManuel, operations), [fournisseursManuel, operations]);
+  const demandeurs = useMemo(() => demandeurBreakdown(operations), [operations]);
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-slate-500">Filtrer par entité :</span>
+        <button
+          onClick={() => setEntiteFilter(null)}
+          className={`px-2.5 py-1 rounded-full text-xs border ${
+            entiteFilter === null ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          Toutes
+        </button>
+        {opts.ENTITES.map((e) => (
+          <button
+            key={e}
+            onClick={() => setEntiteFilter(e)}
+            className={`px-2.5 py-1 rounded-full text-xs border ${
+              entiteFilter === e ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            {e}
+          </button>
+        ))}
+        {entiteFilter && <span className="text-xs text-slate-400">{operations.length} sujet(s) pour {entiteFilter}</span>}
+      </div>
+
       <KpiBandeau k={k} ratio={ratio} ts={ts} />
 
       <div className="grid md:grid-cols-3 gap-4">
@@ -165,6 +208,8 @@ function KpiDashboardContent({
           <Doughnut data={{ labels: fournData.map((d) => d.label), datasets: [{ data: fournData.map((d) => d.value), backgroundColor: fournData.map((d) => d.color), borderWidth: 0 }] }} options={doughnutOpts} />
         </ChartCard>
       </div>
+
+      <DemandeurSection demandeurs={demandeurs} />
 
       <Card title="Commandes par tranche de montant">
         <div className="space-y-2">
@@ -237,6 +282,38 @@ function KpiDashboardContent({
 
       <LivraisonsEnCours operations={operations} onUpdate={updateOperation} />
     </div>
+  );
+}
+
+// ===== Vue par demandeur =====
+
+function DemandeurSection({ demandeurs }: { demandeurs: ReturnType<typeof demandeurBreakdown> }) {
+  if (demandeurs.length === 0) return null;
+  return (
+    <Card title="Vue par demandeur" subtitle="Nombre de sujets, montant commandé et panier moyen — trié par montant décroissant">
+      <div className="overflow-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="text-left text-[10px] uppercase text-slate-400">
+              <th className="py-1.5 pr-2">Demandeur</th>
+              <th className="py-1.5 pr-2 text-right">Nb sujets</th>
+              <th className="py-1.5 pr-2 text-right">Montant (CHF)</th>
+              <th className="py-1.5 text-right">Panier moyen (CHF)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {demandeurs.map((d) => (
+              <tr key={d.dem} className="border-t border-slate-100">
+                <td className="py-1.5 pr-2 font-medium">{d.dem}</td>
+                <td className="py-1.5 pr-2 text-right">{d.count}</td>
+                <td className="py-1.5 pr-2 text-right">{d.montant > 0 ? `CHF ${chf(d.montant)}` : "—"}</td>
+                <td className="py-1.5 text-right">{d.panierMoyen > 0 ? `CHF ${chf(d.panierMoyen)}` : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 
