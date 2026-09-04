@@ -5,11 +5,10 @@ import { FichierControl } from "../components/FichierControl";
 import { Modal } from "../components/Modal";
 import { EmptyLine } from "../components/dashboardUi";
 import { AoPostesComparatif, type PostesComparatifHandle } from "../components/AoPostesComparatif";
-import { AoCriteresTechComparatif, type CriteresTechComparatifHandle, CRITERE_SCORE } from "../components/AoCriteresTechComparatif";
+import { AoCriteresTechComparatif, type CriteresTechComparatifHandle } from "../components/AoCriteresTechComparatif";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import { dateVal } from "../lib/tableFilter";
-import { exportSheetsToExcel } from "../lib/excelExport";
 import { api } from "../api";
 import type { AoSujet, AppelOffre } from "../types";
 
@@ -483,86 +482,23 @@ function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGrou
     });
   const cheapest = offres.find((o) => !Number.isNaN(o.montant))?.montant;
 
-  function exportTco() {
-    const sheets: { name: string; rows: Record<string, string | number>[] }[] = [
-      {
-        name: "Comparatif financier",
-        rows: offres.map(({ row, montant }) => ({
-          Fournisseur: row.fournisseur ?? "",
-          "Offre HT (CHF)": row.offreFournisseur ?? "",
-          "Écart vs moins cher (CHF)": !Number.isNaN(montant) && cheapest !== undefined && montant > cheapest ? montant - cheapest : "",
-          Statut: row.statut ?? "",
-          Validation: row.validation ?? "",
-          "Remarque extraction auto": row.offreMontantAuto ? "Montant extrait automatiquement — à vérifier" : (row.offreExtractionNote ?? ""),
-        })),
-      },
-    ];
-    if (postesData && postesData.postes.length > 0) {
-      const num = (v: string | null | undefined) => { const n = parseFloat(String(v ?? "")); return Number.isNaN(n) ? null : n; };
-      sheets.push({
-        name: "Comparatif par poste",
-        rows: postesData.postes.map((poste) => {
-          const row: Record<string, string | number> = {
-            "Réf.": poste.reference ?? "",
-            Poste: poste.libelle ?? "",
-            "Budget (CHF)": poste.budget ?? "",
-          };
-          const posteValues: number[] = [];
-          for (const r of groupe.rows) {
-            const m = postesData.montants.find((x) => x.posteId === poste.id && x.appelOffreId === r.id);
-            const v = num(m?.montant);
-            if (v !== null) posteValues.push(v);
-            row[`${r.fournisseur ?? "—"} (CHF)`] = m?.montant ?? "";
-          }
-          const posteCheapest = posteValues.length > 0 ? Math.min(...posteValues) : null;
-          for (const r of groupe.rows) {
-            const m = postesData.montants.find((x) => x.posteId === poste.id && x.appelOffreId === r.id);
-            const v = num(m?.montant);
-            row[`${r.fournisseur ?? "—"} — écart vs moins cher`] = v !== null && posteCheapest !== null && v > posteCheapest ? v - posteCheapest : "";
-          }
-          return row;
-        }),
-      });
-    }
-    if (criteresData && criteresData.criteres.length > 0) {
-      const techRows: Record<string, string | number>[] = criteresData.criteres.map((critere) => {
-        const row: Record<string, string | number> = { Critère: critere.libelle ?? "" };
-        for (const r of groupe.rows) {
-          const v = criteresData.valeurs.find((x) => x.critereId === critere.id && x.appelOffreId === r.id);
-          row[r.fournisseur ?? "—"] = v?.valeur ?? "";
-        }
-        row["Remarque / analyse"] = critere.remarque ?? "";
-        return row;
-      });
-      // Synthèse des scores : seulement si au moins un critère utilise la
-      // notation ✓✓/✓/~/✗/? (sinon la ligne ne veut rien dire).
-      const scoreRow: Record<string, string | number> = { Critère: "SCORE GLOBAL (✓✓=2, ✓=1, ~=0.5, ✗=0, ?=0)" };
-      let anyScored = false;
-      for (const r of groupe.rows) {
-        let total = 0;
-        for (const critere of criteresData.criteres) {
-          const v = criteresData.valeurs.find((x) => x.critereId === critere.id && x.appelOffreId === r.id)?.valeur?.trim();
-          if (v !== undefined && v in CRITERE_SCORE) {
-            total += CRITERE_SCORE[v];
-            anyScored = true;
-          }
-        }
-        scoreRow[r.fournisseur ?? "—"] = total;
-      }
-      scoreRow["Remarque / analyse"] = "";
-      if (anyScored) techRows.push(scoreRow);
-      sheets.push({ name: "Comparatif technique", rows: techRows });
-    }
-    if (groupe.rows.some((r) => r.comparatifTechnique)) {
-      sheets.push({
-        name: "Notes complémentaires",
-        rows: groupe.rows.map((row) => ({
-          Fournisseur: row.fournisseur ?? "",
-          "Notes techniques / logistiques": row.comparatifTechnique ?? "",
-        })),
-      });
-    }
-    exportSheetsToExcel(sheets, `TCO-${groupe.numeroAO}-${groupe.chant || "sanschantier"}`);
+  async function exportTco() {
+    // Import différé : exceljs (nécessaire pour la mise en forme du TCO -
+    // bandeau de titre, couleurs, fusion de cellules) est une dépendance
+    // volumineuse, à ne charger que lors d'un export effectif plutôt que de
+    // l'inclure dans le bundle initial de l'application.
+    const { exportTcoExcel } = await import("../lib/tcoExcel");
+    exportTcoExcel({
+      numeroAO: groupe.numeroAO,
+      nom: groupe.nom,
+      chant: groupe.chant,
+      prec: groupe.prec,
+      rows: groupe.rows,
+      postes: postesData?.postes,
+      posteMontants: postesData?.montants,
+      criteres: criteresData?.criteres,
+      critereValeurs: criteresData?.valeurs,
+    });
   }
 
   return (

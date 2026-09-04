@@ -5,12 +5,6 @@ import { useOptions } from "../hooks/useOptions";
 import { api } from "../api";
 import type { SuiviAdministratif } from "../types";
 
-const BL_NON_APPLICABLE = ["agrégats", "déblais"];
-
-function blApplicable(fourn: string | null): boolean {
-  return !BL_NON_APPLICABLE.includes((fourn ?? "").trim().toLowerCase());
-}
-
 /** Champ "miroir" reporté automatiquement depuis l'opération liée (dès
  * qu'un n° de commande y est saisi, à partir du 25/08/2026) : lecture
  * seule pour ces lignes, éditable pour une ligne saisie manuellement. */
@@ -88,35 +82,10 @@ export function SuiviAdministratifPage() {
         </div>
       ),
     },
-    {
-      key: "bl",
-      label: "BL",
-      width: "160px",
-      render: (r) =>
-        blApplicable(r.fourn) ? (
-          <div className="flex flex-col items-start gap-1">
-            <input
-              className="input"
-              defaultValue={r.bl ?? ""}
-              onBlur={(e) => { if (e.target.value !== (r.bl ?? "")) update(r.id, { bl: e.target.value }); }}
-            />
-            <FichierControl
-              nom={r.blFichierNom}
-              url={r.blFichierUrl}
-              label="Joindre le BL"
-              onUpload={(f) => api.uploadBlFichier(r.id, f).then(reload)}
-              onRemove={() => api.removeBlFichier(r.id).then(reload)}
-            />
-          </div>
-        ) : (
-          <span className="text-slate-400 italic text-[11px]">Non applicable</span>
-        ),
-    },
   ];
 
   const quickFilters: QuickFilter<SuiviAdministratif>[] = [
     { label: "Confirmation manquante", predicate: (d) => !(d.confirmation ?? "").trim() },
-    { label: "BL manquant", predicate: (d) => blApplicable(d.fourn) && !(d.bl ?? "").trim() },
   ];
 
   if (loading) return <p className="p-4 text-slate-500">Chargement…</p>;
@@ -126,8 +95,7 @@ export function SuiviAdministratifPage() {
       <h2 className="text-lg font-semibold mb-1">Suivi administratif ({rows.length})</h2>
       <p className="text-xs text-slate-500 mb-3">
         Les lignes 🔗 sont reportées automatiquement depuis le suivi opérationnel dès qu'un n° de commande y est
-        saisi (à partir du 25/08/2026) ; il reste à compléter ici la confirmation de commande et le BL
-        (non applicable pour les agrégats et déblais).
+        saisi (à partir du 25/08/2026) ; il reste à compléter ici la confirmation de commande.
       </p>
       <EditableTable
         columns={columns}
