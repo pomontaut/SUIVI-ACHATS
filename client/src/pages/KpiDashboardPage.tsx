@@ -296,18 +296,34 @@ function DemandeurSection({ demandeurs }: { demandeurs: ReturnType<typeof demand
   const totalPanierMoyen = totalCountAvecMontant > 0 ? totalMontant / totalCountAvecMontant : 0;
   const anyGain = demandeurs.some((d) => d.hasGain);
   const totalGain = demandeurs.reduce((s, d) => s + d.gain, 0);
+  const totalEnCours = demandeurs.reduce((s, d) => s + d.enCours, 0);
+  const totalClotures = demandeurs.reduce((s, d) => s + d.clotures, 0);
+  const totalCloturesAvecCommande = demandeurs.reduce((s, d) => s + d.cloturesAvecCommande, 0);
+  const totalCloturesSansCommande = demandeurs.reduce((s, d) => s + d.cloturesSansCommande, 0);
+  const totalTcoFaitCount = demandeurs.reduce((s, d) => s + d.tcoFaitCount, 0);
+  const totalTcoNonFaitCount = demandeurs.reduce((s, d) => s + d.tcoNonFaitCount, 0);
+  const totalTcoFaitMontant = demandeurs.reduce((s, d) => s + d.tcoFaitMontant, 0);
+  const totalTcoNonFaitMontant = demandeurs.reduce((s, d) => s + d.tcoNonFaitMontant, 0);
 
   return (
-    <Card title="Vue par demandeur" subtitle="Nombre de sujets, montant commandé, panier moyen et gain — trié par nombre de sujets décroissant">
+    <Card title="Vue par demandeur" subtitle="Nombre de sujets (statut, TCO), montant commandé, panier moyen et gain — trié par nombre de sujets décroissant">
       <div className="overflow-auto">
         <table className="text-xs border-collapse mx-auto">
           <thead>
             <tr className="text-[10px] uppercase text-slate-400">
               <th className="py-1.5 px-3 text-left w-40">Demandeur</th>
-              <th className="py-1.5 px-3 text-center w-28">Nb sujets</th>
+              <th className="py-1.5 px-3 text-center w-24">Nb sujets</th>
+              <th className="py-1.5 px-3 text-center w-24">En cours</th>
+              <th className="py-1.5 px-3 text-center w-24">Clôturés</th>
+              <th className="py-1.5 px-3 text-center w-28">Clôturés avec cmd</th>
+              <th className="py-1.5 px-3 text-center w-28">Clôturés sans cmd</th>
               <th className="py-1.5 px-3 text-center w-32">Montant (CHF)</th>
               <th className="py-1.5 px-3 text-center w-32">Panier moyen (CHF)</th>
               <th className="py-1.5 px-3 text-center w-32">Gain (CHF)</th>
+              <th className="py-1.5 px-3 text-center w-24">TCO fait (nb)</th>
+              <th className="py-1.5 px-3 text-center w-28">TCO non fait (nb)</th>
+              <th className="py-1.5 px-3 text-center w-32">TCO fait (CHF)</th>
+              <th className="py-1.5 px-3 text-center w-32">TCO non fait (CHF)</th>
             </tr>
           </thead>
           <tbody>
@@ -315,17 +331,33 @@ function DemandeurSection({ demandeurs }: { demandeurs: ReturnType<typeof demand
               <tr key={d.dem} className="border-t border-slate-100">
                 <td className="py-1.5 px-3 font-medium">{d.dem}</td>
                 <td className="py-1.5 px-3 text-center">{d.count}</td>
+                <td className="py-1.5 px-3 text-center">{d.enCours}</td>
+                <td className="py-1.5 px-3 text-center">{d.clotures}</td>
+                <td className="py-1.5 px-3 text-center">{d.cloturesAvecCommande}</td>
+                <td className="py-1.5 px-3 text-center">{d.cloturesSansCommande}</td>
                 <td className="py-1.5 px-3 text-center">{d.montant > 0 ? `CHF ${chf(d.montant)}` : "—"}</td>
                 <td className="py-1.5 px-3 text-center">{d.panierMoyen > 0 ? `CHF ${chf(d.panierMoyen)}` : "—"}</td>
                 <td className="py-1.5 px-3 text-center">{d.hasGain ? `CHF ${chf(d.gain)}` : "N/A"}</td>
+                <td className="py-1.5 px-3 text-center">{d.tcoFaitCount}</td>
+                <td className="py-1.5 px-3 text-center">{d.tcoNonFaitCount}</td>
+                <td className="py-1.5 px-3 text-center">{d.tcoFaitMontant > 0 ? `CHF ${chf(d.tcoFaitMontant)}` : "—"}</td>
+                <td className="py-1.5 px-3 text-center">{d.tcoNonFaitMontant > 0 ? `CHF ${chf(d.tcoNonFaitMontant)}` : "—"}</td>
               </tr>
             ))}
             <tr className="border-t-2 border-slate-300 font-semibold">
               <td className="py-1.5 px-3">Total</td>
               <td className="py-1.5 px-3 text-center">{totalCount}</td>
+              <td className="py-1.5 px-3 text-center">{totalEnCours}</td>
+              <td className="py-1.5 px-3 text-center">{totalClotures}</td>
+              <td className="py-1.5 px-3 text-center">{totalCloturesAvecCommande}</td>
+              <td className="py-1.5 px-3 text-center">{totalCloturesSansCommande}</td>
               <td className="py-1.5 px-3 text-center">{totalMontant > 0 ? `CHF ${chf(totalMontant)}` : "—"}</td>
               <td className="py-1.5 px-3 text-center">{totalPanierMoyen > 0 ? `CHF ${chf(totalPanierMoyen)}` : "—"}</td>
               <td className="py-1.5 px-3 text-center">{anyGain ? `CHF ${chf(totalGain)}` : "N/A"}</td>
+              <td className="py-1.5 px-3 text-center">{totalTcoFaitCount}</td>
+              <td className="py-1.5 px-3 text-center">{totalTcoNonFaitCount}</td>
+              <td className="py-1.5 px-3 text-center">{totalTcoFaitMontant > 0 ? `CHF ${chf(totalTcoFaitMontant)}` : "—"}</td>
+              <td className="py-1.5 px-3 text-center">{totalTcoNonFaitMontant > 0 ? `CHF ${chf(totalTcoNonFaitMontant)}` : "—"}</td>
             </tr>
           </tbody>
         </table>
