@@ -5,6 +5,7 @@ import { FichierControl } from "../components/FichierControl";
 import { Modal } from "../components/Modal";
 import { EmptyLine } from "../components/dashboardUi";
 import { AoPostesComparatif, type PostesComparatifHandle } from "../components/AoPostesComparatif";
+import { AoCriteresTechComparatif, type CriteresTechComparatifHandle, CRITERE_SCORE } from "../components/AoCriteresTechComparatif";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
 import { dateVal } from "../lib/tableFilter";
@@ -472,6 +473,7 @@ function MoveRowModal({
 
 function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGroup; onUpdate: (id: string, patch: Partial<AppelOffre>) => void; onFileChanged: () => void; onClose: () => void }) {
   const [postesData, setPostesData] = useState<PostesComparatifHandle | null>(null);
+  const [criteresData, setCriteresData] = useState<CriteresTechComparatifHandle | null>(null);
   const offres = groupe.rows
     .map((r) => ({ row: r, montant: parseFloat(r.offreFournisseur ?? "") }))
     .sort((a, b) => {
@@ -522,13 +524,44 @@ function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGrou
         }),
       });
     }
-    sheets.push({
-      name: "Comparatif technique",
-      rows: groupe.rows.map((row) => ({
-        Fournisseur: row.fournisseur ?? "",
-        "Notes techniques / logistiques": row.comparatifTechnique ?? "",
-      })),
-    });
+    if (criteresData && criteresData.criteres.length > 0) {
+      const techRows: Record<string, string | number>[] = criteresData.criteres.map((critere) => {
+        const row: Record<string, string | number> = { Critère: critere.libelle ?? "" };
+        for (const r of groupe.rows) {
+          const v = criteresData.valeurs.find((x) => x.critereId === critere.id && x.appelOffreId === r.id);
+          row[r.fournisseur ?? "—"] = v?.valeur ?? "";
+        }
+        row["Remarque / analyse"] = critere.remarque ?? "";
+        return row;
+      });
+      // Synthèse des scores : seulement si au moins un critère utilise la
+      // notation ✓✓/✓/~/✗/? (sinon la ligne ne veut rien dire).
+      const scoreRow: Record<string, string | number> = { Critère: "SCORE GLOBAL (✓✓=2, ✓=1, ~=0.5, ✗=0, ?=0)" };
+      let anyScored = false;
+      for (const r of groupe.rows) {
+        let total = 0;
+        for (const critere of criteresData.criteres) {
+          const v = criteresData.valeurs.find((x) => x.critereId === critere.id && x.appelOffreId === r.id)?.valeur?.trim();
+          if (v !== undefined && v in CRITERE_SCORE) {
+            total += CRITERE_SCORE[v];
+            anyScored = true;
+          }
+        }
+        scoreRow[r.fournisseur ?? "—"] = total;
+      }
+      scoreRow["Remarque / analyse"] = "";
+      if (anyScored) techRows.push(scoreRow);
+      sheets.push({ name: "Comparatif technique", rows: techRows });
+    }
+    if (groupe.rows.some((r) => r.comparatifTechnique)) {
+      sheets.push({
+        name: "Notes complémentaires",
+        rows: groupe.rows.map((row) => ({
+          Fournisseur: row.fournisseur ?? "",
+          "Notes techniques / logistiques": row.comparatifTechnique ?? "",
+        })),
+      });
+    }
     exportSheetsToExcel(sheets, `TCO-${groupe.numeroAO}-${groupe.chant || "sanschantier"}`);
   }
 
@@ -592,14 +625,16 @@ function TcoModal({ groupe, onUpdate, onFileChanged, onClose }: { groupe: AoGrou
 
         <AoPostesComparatif sujetCle={groupe.key} rows={groupe.rows} onDataChanged={setPostesData} />
 
-        <h4 className="text-xs font-semibold uppercase text-slate-400 mb-2">Comparatif technique / logistique</h4>
+        <AoCriteresTechComparatif sujetCle={groupe.key} rows={groupe.rows} onDataChanged={setCriteresData} />
+
+        <h4 className="text-xs font-semibold uppercase text-slate-400 mb-2">Notes complémentaires par fournisseur</h4>
         <div className="grid md:grid-cols-2 gap-3">
           {groupe.rows.map((row) => (
             <div key={row.id} className="border border-slate-200 rounded-lg p-2.5">
               <div className="text-xs font-medium mb-1">{row.fournisseur}</div>
               <textarea
                 className="input w-full h-20 text-xs"
-                placeholder="Notes techniques / logistiques (conformité, délai, garantie...)"
+                placeholder="Notes libres (conformité, délai, garantie...)"
                 defaultValue={row.comparatifTechnique ?? ""}
                 onBlur={(e) => { if (e.target.value !== (row.comparatifTechnique ?? "")) onUpdate(row.id, { comparatifTechnique: e.target.value }); }}
               />

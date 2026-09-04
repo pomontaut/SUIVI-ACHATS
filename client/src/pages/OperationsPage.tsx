@@ -16,6 +16,12 @@ const PRIO_ROW_BORDER: Record<string, string> = {
   P1: "border-l-4 !border-l-amber-400",
 };
 
+// Étapes à repérer visuellement d'un coup d'œil dans la liste déroulante.
+const ETAPE_COLOR: Record<string, string> = {
+  "Confirmation de commande": "!bg-red-100 !text-red-800 hover:!bg-red-100",
+  "Classement commande Lisa": "!bg-green-100 !text-green-800 hover:!bg-green-100",
+};
+
 /** Gain/perte = Montant - Budget (négatif = économie, positif = dépassement,
  * cohérent avec le signe attendu par gainPct ci-dessous). Calculé
  * automatiquement dès que le budget et le montant sont tous les deux
@@ -108,7 +114,29 @@ export function OperationsPage() {
     { key: "impl", label: "Impl.", type: "select", options: opts.IMPL, width: "70px" },
     { key: "fourn", label: "Fournitures", type: "select", options: opts.FOURNITURES, width: "130px" },
     { key: "prec", label: "Précisions", width: "140px" },
-    { key: "etape", id: "etapeSelect", label: "Étape", type: "select", options: opts.ETAPES, width: "170px" },
+    {
+      key: "etape",
+      id: "etapeSelect",
+      label: "Étape",
+      type: "select",
+      options: opts.ETAPES,
+      width: "170px",
+      render: (o) => (
+        <select
+          className={`input ${ETAPE_COLOR[o.etape ?? ""] ?? ""}`}
+          value={o.etape ?? ""}
+          onChange={(e) => update(o.id, { etape: e.target.value })}
+        >
+          <option value=""></option>
+          {opts.ETAPES.map((e) => (
+            <option key={e} value={e}>
+              {e}
+            </option>
+          ))}
+        </select>
+      ),
+      filterValue: (o) => o.etape ?? "",
+    },
     {
       key: "consult",
       label: "Consultation",

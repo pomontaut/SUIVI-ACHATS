@@ -12,6 +12,7 @@ import { diagnosticRouter } from "./routes/diagnostic.js";
 import { offreFichierRouter } from "./routes/offreFichier.js";
 import { aoSujetsRouter } from "./routes/aoSujets.js";
 import { aoPostesRouter } from "./routes/aoPostes.js";
+import { aoCriteresTechRouter } from "./routes/aoCriteresTech.js";
 import { fichierRouter } from "./lib/fichierRoutes.js";
 import { syncLivraisonsFromOperations } from "./lib/syncLivraisons.js";
 import { syncAppelsOffresFromOperations } from "./lib/syncAppelsOffres.js";
@@ -36,6 +37,7 @@ app.use("/api/appels-offres", offreFichierRouter);
 app.use("/api/appels-offres", crudRouter(prisma.appelOffre, { beforeList: syncAppelsOffresFromOperations }));
 app.use("/api/ao-sujets", aoSujetsRouter);
 app.use("/api/ao-postes", aoPostesRouter);
+app.use("/api/ao-criteres-tech", aoCriteresTechRouter);
 app.use("/api/suivi-administratif", fichierRouter(prisma.suiviAdministratif, {
   routeSuffix: "/confirmation-fichier",
   nomField: "confirmationFichierNom",
