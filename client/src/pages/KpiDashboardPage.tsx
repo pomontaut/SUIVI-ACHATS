@@ -290,24 +290,24 @@ function KpiDashboardContent({
 function DemandeurSection({ demandeurs }: { demandeurs: ReturnType<typeof demandeurBreakdown> }) {
   if (demandeurs.length === 0) return null;
   return (
-    <Card title="Vue par demandeur" subtitle="Nombre de sujets, montant commandé et panier moyen — trié par montant décroissant">
+    <Card title="Vue par demandeur" subtitle="Nombre de sujets, montant commandé et panier moyen — trié par nombre de sujets décroissant">
       <div className="overflow-auto">
         <table className="w-full text-xs border-collapse">
           <thead>
             <tr className="text-left text-[10px] uppercase text-slate-400">
               <th className="py-1.5 pr-2">Demandeur</th>
-              <th className="py-1.5 pr-2 text-right">Nb sujets</th>
-              <th className="py-1.5 pr-2 text-right">Montant (CHF)</th>
-              <th className="py-1.5 text-right">Panier moyen (CHF)</th>
+              <th className="py-1.5 pr-2 text-center">Nb sujets</th>
+              <th className="py-1.5 pr-2 text-center">Montant (CHF)</th>
+              <th className="py-1.5 text-center">Panier moyen (CHF)</th>
             </tr>
           </thead>
           <tbody>
             {demandeurs.map((d) => (
               <tr key={d.dem} className="border-t border-slate-100">
                 <td className="py-1.5 pr-2 font-medium">{d.dem}</td>
-                <td className="py-1.5 pr-2 text-right">{d.count}</td>
-                <td className="py-1.5 pr-2 text-right">{d.montant > 0 ? `CHF ${chf(d.montant)}` : "—"}</td>
-                <td className="py-1.5 text-right">{d.panierMoyen > 0 ? `CHF ${chf(d.panierMoyen)}` : "—"}</td>
+                <td className="py-1.5 pr-2 text-center">{d.count}</td>
+                <td className="py-1.5 pr-2 text-center">{d.montant > 0 ? `CHF ${chf(d.montant)}` : "—"}</td>
+                <td className="py-1.5 text-center">{d.panierMoyen > 0 ? `CHF ${chf(d.panierMoyen)}` : "—"}</td>
               </tr>
             ))}
           </tbody>

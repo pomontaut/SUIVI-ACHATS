@@ -96,7 +96,7 @@ export function OperationsPage() {
       filterValue: (o) => operationPrio(o),
     },
     { key: "date", label: "Date", type: "date", width: "80px" },
-    { key: "dem", label: "Demandeur", width: "110px" },
+    { key: "dem", label: "Demandeur", width: "110px", singleLine: true },
     { key: "ent", label: "Entité", type: "select", options: opts.ENTITES, width: "80px" },
     {
       key: "chant",
