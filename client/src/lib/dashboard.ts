@@ -75,7 +75,7 @@ export interface DemandeurRow {
 
 /** Répartition par demandeur (nombre de sujets, montant total, panier
  * moyen) - permet par exemple de montrer à un directeur d'entité ce qui a
- * été traité pour ses demandeurs. Triée par montant décroissant. */
+ * été traité pour ses demandeurs. Triée par nombre de sujets décroissant. */
 export function demandeurBreakdown(operations: Operation[]): DemandeurRow[] {
   const map = new Map<string, { count: number; montant: number; countAvecMontant: number }>();
   for (const o of operations) {
@@ -94,7 +94,7 @@ export function demandeurBreakdown(operations: Operation[]): DemandeurRow[] {
       countAvecMontant: v.countAvecMontant,
       panierMoyen: v.countAvecMontant > 0 ? v.montant / v.countAvecMontant : 0,
     }))
-    .sort((a, b) => b.montant - a.montant);
+    .sort((a, b) => b.count - a.count);
 }
 
 export interface TrancheResult {

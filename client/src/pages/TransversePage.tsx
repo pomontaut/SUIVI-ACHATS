@@ -41,7 +41,7 @@ export function TransversePage() {
     },
     { key: "statut", label: "Statut", type: "select", options: ["Actif", "Clôturé"], width: "90px" },
     { key: "date", label: "Date", type: "date", width: "85px" },
-    { key: "dem", label: "Demandeur", width: "110px" },
+    { key: "dem", label: "Demandeur", width: "110px", singleLine: true },
     { key: "ent", label: "Entité", type: "select", options: opts.ENTITES, width: "80px" },
     { key: "nom", label: "Nom dossier", width: "160px" },
     { key: "type", label: "Type", type: "select", options: opts.TYPES_TR, width: "110px" },

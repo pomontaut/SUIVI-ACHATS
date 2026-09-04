@@ -22,6 +22,11 @@ export interface ColumnDef<T> {
   /** Désactive le filtre par colonne (tri toujours possible) - utile pour
    * les champs de texte libre à trop faible valeur ajoutée en filtre. */
   noFilter?: boolean;
+  /** Force une seule ligne (input classique, sans retour à la ligne ni
+   * agrandissement automatique) - pour les champs courts type nom/code
+   * (ex: Demandeur), pour qui le textarea auto-adaptable des champs de
+   * texte libre casse le mot au lieu de rester lisible sur une ligne. */
+  singleLine?: boolean;
 }
 
 export interface QuickFilter<T> {
@@ -476,6 +481,21 @@ function Cell<T>({
           </option>
         ))}
       </select>
+    );
+  }
+
+  if (col.singleLine) {
+    return (
+      <input
+        className="input"
+        type="text"
+        placeholder={col.type === "date" ? "jj/mm/aa" : undefined}
+        value={local}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={() => {
+          if (local !== (value == null ? "" : String(value))) onChange(local);
+        }}
+      />
     );
   }
 
