@@ -243,6 +243,34 @@ model AoPosteMontant {
   @@unique([posteId, appelOffreId])
 }
 
+// Critère de comparaison technique/logistique d'un "sujet AO" (même
+// regroupement que AoPoste.sujetCle), en liste libre par sujet (ex: "Classe
+// de charge", "Matériau", "Délai de livraison"...), à l'image des
+// comparatifs de référence transmis par l'utilisateur. La valeur par
+// fournisseur est du texte libre (peut être une note ✓/✓✓/~/✗/? pour
+// alimenter le score de synthèse à l'export, ou une description complète).
+model AoCritereTech {
+  id        String   @id @default(cuid())
+  sujetCle  String
+  libelle   String?
+  remarque  String? // analyse/recommandation pour ce critère, commune à tous les fournisseurs
+  ordre     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Valeur d'un critère technique pour un fournisseur (une ligne AppelOffre) donné.
+model AoCritereTechValeur {
+  id           String   @id @default(cuid())
+  critereId    String
+  appelOffreId String
+  valeur       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([critereId, appelOffreId])
+}
+
 // Cahier des charges : base de connaissance des questions à poser aux
 // demandeurs pour chaque type de fourniture/prestation, indépendante du
 // suivi opérationnel (aucune synchro automatique). Le "Groupe marchandise"

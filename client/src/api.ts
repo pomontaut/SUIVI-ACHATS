@@ -67,4 +67,13 @@ export const api = {
   removeAoPoste: (id: string) => request<void>(`/ao-postes/${id}`, { method: "DELETE" }),
   updateAoPosteMontant: (posteId: string, appelOffreId: string, montant: string | null) =>
     request<import("./types").AoPosteMontant>(`/ao-postes/${posteId}/montant/${appelOffreId}`, { method: "PUT", body: JSON.stringify({ montant }) }),
+  aoCriteresTech: (sujetCle: string) =>
+    request<{ criteres: import("./types").AoCritereTech[]; valeurs: import("./types").AoCritereTechValeur[] }>(`/ao-criteres-tech?sujetCle=${encodeURIComponent(sujetCle)}`),
+  addAoCritereTech: (data: { sujetCle: string; libelle?: string | null }) =>
+    request<import("./types").AoCritereTech>("/ao-criteres-tech", { method: "POST", body: JSON.stringify(data) }),
+  updateAoCritereTech: (id: string, data: { libelle?: string | null; remarque?: string | null; ordre?: number }) =>
+    request<import("./types").AoCritereTech>(`/ao-criteres-tech/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  removeAoCritereTech: (id: string) => request<void>(`/ao-criteres-tech/${id}`, { method: "DELETE" }),
+  updateAoCritereTechValeur: (critereId: string, appelOffreId: string, valeur: string | null) =>
+    request<import("./types").AoCritereTechValeur>(`/ao-criteres-tech/${critereId}/valeur/${appelOffreId}`, { method: "PUT", body: JSON.stringify({ valeur }) }),
 };

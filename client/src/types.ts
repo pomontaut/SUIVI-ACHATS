@@ -146,6 +146,21 @@ export interface AoPosteMontant {
   montantAuto: boolean;
 }
 
+export interface AoCritereTech {
+  id: string;
+  sujetCle: string;
+  libelle: string | null;
+  remarque: string | null;
+  ordre: number;
+}
+
+export interface AoCritereTechValeur {
+  id: string;
+  critereId: string;
+  appelOffreId: string;
+  valeur: string | null;
+}
+
 export interface SuiviAdministratif extends Base {
   operationId: string | null;
   date: string | null;
