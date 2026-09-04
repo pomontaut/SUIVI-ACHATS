@@ -289,16 +289,25 @@ function KpiDashboardContent({
 
 function DemandeurSection({ demandeurs }: { demandeurs: ReturnType<typeof demandeurBreakdown> }) {
   if (demandeurs.length === 0) return null;
+
+  const totalCount = demandeurs.reduce((s, d) => s + d.count, 0);
+  const totalMontant = demandeurs.reduce((s, d) => s + d.montant, 0);
+  const totalCountAvecMontant = demandeurs.reduce((s, d) => s + d.countAvecMontant, 0);
+  const totalPanierMoyen = totalCountAvecMontant > 0 ? totalMontant / totalCountAvecMontant : 0;
+  const anyGain = demandeurs.some((d) => d.hasGain);
+  const totalGain = demandeurs.reduce((s, d) => s + d.gain, 0);
+
   return (
-    <Card title="Vue par demandeur" subtitle="Nombre de sujets, montant commandé et panier moyen — trié par nombre de sujets décroissant">
+    <Card title="Vue par demandeur" subtitle="Nombre de sujets, montant commandé, panier moyen et gain — trié par nombre de sujets décroissant">
       <div className="overflow-auto">
         <table className="w-full text-xs border-collapse">
           <thead>
-            <tr className="text-left text-[10px] uppercase text-slate-400">
-              <th className="py-1.5 pr-2">Demandeur</th>
-              <th className="py-1.5 pr-2 text-center">Nb sujets</th>
-              <th className="py-1.5 pr-2 text-center">Montant (CHF)</th>
-              <th className="py-1.5 text-center">Panier moyen (CHF)</th>
+            <tr className="text-[10px] uppercase text-slate-400">
+              <th className="py-1.5 pr-2 text-left">Demandeur</th>
+              <th className="py-1.5 pr-2 text-center w-24">Nb sujets</th>
+              <th className="py-1.5 pr-2 text-center w-32">Montant (CHF)</th>
+              <th className="py-1.5 pr-2 text-center w-32">Panier moyen (CHF)</th>
+              <th className="py-1.5 text-center w-32">Gain (CHF)</th>
             </tr>
           </thead>
           <tbody>
@@ -307,9 +316,17 @@ function DemandeurSection({ demandeurs }: { demandeurs: ReturnType<typeof demand
                 <td className="py-1.5 pr-2 font-medium">{d.dem}</td>
                 <td className="py-1.5 pr-2 text-center">{d.count}</td>
                 <td className="py-1.5 pr-2 text-center">{d.montant > 0 ? `CHF ${chf(d.montant)}` : "—"}</td>
-                <td className="py-1.5 text-center">{d.panierMoyen > 0 ? `CHF ${chf(d.panierMoyen)}` : "—"}</td>
+                <td className="py-1.5 pr-2 text-center">{d.panierMoyen > 0 ? `CHF ${chf(d.panierMoyen)}` : "—"}</td>
+                <td className="py-1.5 text-center">{d.hasGain ? `CHF ${chf(d.gain)}` : "N/A"}</td>
               </tr>
             ))}
+            <tr className="border-t-2 border-slate-300 font-semibold">
+              <td className="py-1.5 pr-2">Total</td>
+              <td className="py-1.5 pr-2 text-center">{totalCount}</td>
+              <td className="py-1.5 pr-2 text-center">{totalMontant > 0 ? `CHF ${chf(totalMontant)}` : "—"}</td>
+              <td className="py-1.5 pr-2 text-center">{totalPanierMoyen > 0 ? `CHF ${chf(totalPanierMoyen)}` : "—"}</td>
+              <td className="py-1.5 text-center">{anyGain ? `CHF ${chf(totalGain)}` : "N/A"}</td>
+            </tr>
           </tbody>
         </table>
       </div>
