@@ -300,32 +300,32 @@ function DemandeurSection({ demandeurs }: { demandeurs: ReturnType<typeof demand
   return (
     <Card title="Vue par demandeur" subtitle="Nombre de sujets, montant commandé, panier moyen et gain — trié par nombre de sujets décroissant">
       <div className="overflow-auto">
-        <table className="w-full text-xs border-collapse">
+        <table className="text-xs border-collapse mx-auto">
           <thead>
             <tr className="text-[10px] uppercase text-slate-400">
-              <th className="py-1.5 pr-2 text-left">Demandeur</th>
-              <th className="py-1.5 pr-2 text-center w-24">Nb sujets</th>
-              <th className="py-1.5 pr-2 text-center w-32">Montant (CHF)</th>
-              <th className="py-1.5 pr-2 text-center w-32">Panier moyen (CHF)</th>
-              <th className="py-1.5 text-center w-32">Gain (CHF)</th>
+              <th className="py-1.5 px-3 text-left w-40">Demandeur</th>
+              <th className="py-1.5 px-3 text-center w-28">Nb sujets</th>
+              <th className="py-1.5 px-3 text-center w-32">Montant (CHF)</th>
+              <th className="py-1.5 px-3 text-center w-32">Panier moyen (CHF)</th>
+              <th className="py-1.5 px-3 text-center w-32">Gain (CHF)</th>
             </tr>
           </thead>
           <tbody>
             {demandeurs.map((d) => (
               <tr key={d.dem} className="border-t border-slate-100">
-                <td className="py-1.5 pr-2 font-medium">{d.dem}</td>
-                <td className="py-1.5 pr-2 text-center">{d.count}</td>
-                <td className="py-1.5 pr-2 text-center">{d.montant > 0 ? `CHF ${chf(d.montant)}` : "—"}</td>
-                <td className="py-1.5 pr-2 text-center">{d.panierMoyen > 0 ? `CHF ${chf(d.panierMoyen)}` : "—"}</td>
-                <td className="py-1.5 text-center">{d.hasGain ? `CHF ${chf(d.gain)}` : "N/A"}</td>
+                <td className="py-1.5 px-3 font-medium">{d.dem}</td>
+                <td className="py-1.5 px-3 text-center">{d.count}</td>
+                <td className="py-1.5 px-3 text-center">{d.montant > 0 ? `CHF ${chf(d.montant)}` : "—"}</td>
+                <td className="py-1.5 px-3 text-center">{d.panierMoyen > 0 ? `CHF ${chf(d.panierMoyen)}` : "—"}</td>
+                <td className="py-1.5 px-3 text-center">{d.hasGain ? `CHF ${chf(d.gain)}` : "N/A"}</td>
               </tr>
             ))}
             <tr className="border-t-2 border-slate-300 font-semibold">
-              <td className="py-1.5 pr-2">Total</td>
-              <td className="py-1.5 pr-2 text-center">{totalCount}</td>
-              <td className="py-1.5 pr-2 text-center">{totalMontant > 0 ? `CHF ${chf(totalMontant)}` : "—"}</td>
-              <td className="py-1.5 pr-2 text-center">{totalPanierMoyen > 0 ? `CHF ${chf(totalPanierMoyen)}` : "—"}</td>
-              <td className="py-1.5 text-center">{anyGain ? `CHF ${chf(totalGain)}` : "N/A"}</td>
+              <td className="py-1.5 px-3">Total</td>
+              <td className="py-1.5 px-3 text-center">{totalCount}</td>
+              <td className="py-1.5 px-3 text-center">{totalMontant > 0 ? `CHF ${chf(totalMontant)}` : "—"}</td>
+              <td className="py-1.5 px-3 text-center">{totalPanierMoyen > 0 ? `CHF ${chf(totalPanierMoyen)}` : "—"}</td>
+              <td className="py-1.5 px-3 text-center">{anyGain ? `CHF ${chf(totalGain)}` : "N/A"}</td>
             </tr>
           </tbody>
         </table>
@@ -626,27 +626,39 @@ function CumulRatioChart({ evolution, seuil }: { evolution: ReturnType<typeof ra
 // ===== Indicateur de pertinence (redesigné en petits graphiques) =====
 
 function PertinenceSection({ pert }: { pert: ReturnType<typeof pertBreakdown> }) {
+  const totalMontant = pert.rows.reduce((s, r) => s + r.total, 0);
   return (
-    <Card title="Indicateur de pertinence des commandes" subtitle={`${pert.totalCmd} commandes analysées`}>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {pert.rows.map((p) => (
-          <div key={p.key} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-            <div className="text-[10px] text-slate-500 mb-1.5">{p.label}</div>
-            <div className="h-16">
-              <Doughnut
-                data={{ labels: [p.label, "Reste"], datasets: [{ data: [p.count, Math.max(pert.totalCmd - p.count, 0)], backgroundColor: ["#534AB7", "#e1e0d9"], borderWidth: 0 }] }}
-                options={{ ...doughnutOpts, cutout: "70%" }}
-              />
-            </div>
-            <div className="text-center mt-1.5">
-              <span className="text-base font-semibold text-indigo-700">{p.count}</span>
-              <span className="text-[11px] text-slate-500"> ({p.pct}%)</span>
-              <div className="text-[11px] text-violet-700 font-medium">CHF {chf(p.total)}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Card>
+    <div className="grid md:grid-cols-2 gap-4">
+      <ChartCard
+        title="Pertinence des commandes — en nombre"
+        subtitle={`${pert.totalCmd} commandes analysées, par typologie d'action`}
+        legend={<LegendList items={pert.rows.map((p) => ({ label: p.label, value: p.count, pct: p.pct, color: p.color }))} />}
+      >
+        <Bar
+          data={{ labels: pert.rows.map((p) => p.label), datasets: [{ data: pert.rows.map((p) => p.count), backgroundColor: pert.rows.map((p) => p.color), borderRadius: 4 }] }}
+          options={barOpts}
+        />
+      </ChartCard>
+      <ChartCard
+        title="Pertinence des commandes — en montant"
+        subtitle="Répartition du montant (CHF) par typologie d'action"
+        legend={
+          <LegendList
+            items={pert.rows.map((p) => ({
+              label: p.label,
+              value: `CHF ${chf(p.total)}`,
+              pct: totalMontant > 0 ? Math.round((p.total / totalMontant) * 100) : 0,
+              color: p.color,
+            }))}
+          />
+        }
+      >
+        <Bar
+          data={{ labels: pert.rows.map((p) => p.label), datasets: [{ data: pert.rows.map((p) => p.total), backgroundColor: pert.rows.map((p) => p.color), borderRadius: 4 }] }}
+          options={{ ...barOpts, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `CHF ${chf(Number(ctx.raw))}` } } } }}
+        />
+      </ChartCard>
+    </div>
   );
 }
 
