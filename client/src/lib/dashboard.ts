@@ -73,28 +73,59 @@ export interface DemandeurRow {
   panierMoyen: number; // montant / countAvecMontant (0 si aucune commande chiffrée)
   gain: number; // gain/perte cumulé (même calcul que kpis())
   hasGain: boolean; // false si aucun sujet de ce demandeur n'a de budget/gain renseigné -> afficher N/A
+  enCours: number; // sujets non clôturés
+  clotures: number; // sujets clôturés
+  cloturesAvecCommande: number; // sujets clôturés avec un montant commandé
+  cloturesSansCommande: number; // sujets clôturés sans montant commandé
+  tcoFaitCount: number; // parmi les sujets avec commande : TCO fait
+  tcoNonFaitCount: number; // parmi les sujets avec commande : TCO non fait
+  tcoFaitMontant: number; // montant cumulé des commandes avec TCO fait
+  tcoNonFaitMontant: number; // montant cumulé des commandes avec TCO non fait
 }
 
 /** Répartition par demandeur (nombre de sujets, montant total, panier
- * moyen, gain) - permet par exemple de montrer à un directeur d'entité ce
- * qui a été traité pour ses demandeurs. Ne retient que les sujets
- * exploitation (et variantes) et Devis PV - les autres types (soumission,
- * Suivi SLA...) ne relèvent pas de ce qu'un demandeur a "commandé" au sens
- * de cette vue. Triée par nombre de sujets décroissant. */
+ * moyen, gain, statut, TCO) - permet par exemple de montrer à un directeur
+ * d'entité ce qui a été traité pour ses demandeurs. Ne retient que les
+ * sujets exploitation (et variantes) et Devis PV - les autres types
+ * (soumission, Suivi SLA...) ne relèvent pas de ce qu'un demandeur a
+ * "commandé" au sens de cette vue. Triée par nombre de sujets décroissant. */
 export function demandeurBreakdown(allOperations: Operation[]): DemandeurRow[] {
   const operations = allOperations.filter((o) => isAutoPrioType(o.type) === "exploitation" || o.type === "Devis PV");
-  const map = new Map<string, { count: number; montant: number; countAvecMontant: number; gain: number; hasGain: boolean }>();
+  const map = new Map<string, {
+    count: number; montant: number; countAvecMontant: number; gain: number; hasGain: boolean;
+    enCours: number; clotures: number; cloturesAvecCommande: number; cloturesSansCommande: number;
+    tcoFaitCount: number; tcoNonFaitCount: number; tcoFaitMontant: number; tcoNonFaitMontant: number;
+  }>();
   for (const o of operations) {
     const key = (o.dem ?? "").trim() || "Non renseigné";
-    const e = map.get(key) ?? { count: 0, montant: 0, countAvecMontant: 0, gain: 0, hasGain: false };
+    const e = map.get(key) ?? {
+      count: 0, montant: 0, countAvecMontant: 0, gain: 0, hasGain: false,
+      enCours: 0, clotures: 0, cloturesAvecCommande: 0, cloturesSansCommande: 0,
+      tcoFaitCount: 0, tcoNonFaitCount: 0, tcoFaitMontant: 0, tcoNonFaitMontant: 0,
+    };
     e.count += 1;
     const m = num(o.montant);
-    if (m > 0) { e.montant += m; e.countAvecMontant += 1; }
+    const aCommande = m > 0;
+    if (aCommande) { e.montant += m; e.countAvecMontant += 1; }
     const b = numOrNaN(o.budget);
     const mm = numOrNaN(o.montant);
     const g = numOrNaN(o.gain);
     if (!Number.isNaN(b) && b > 0 && !Number.isNaN(mm) && mm > 0) { e.gain += mm - b; e.hasGain = true; }
     else if (!Number.isNaN(g)) { e.gain += g; e.hasGain = true; }
+
+    if (isClos(o.etape)) {
+      e.clotures += 1;
+      if (aCommande) e.cloturesAvecCommande += 1;
+      else e.cloturesSansCommande += 1;
+    } else {
+      e.enCours += 1;
+    }
+
+    if (aCommande) {
+      const tcoFait = (o.tco ?? "").trim().toLowerCase() === "oui";
+      if (tcoFait) { e.tcoFaitCount += 1; e.tcoFaitMontant += m; }
+      else { e.tcoNonFaitCount += 1; e.tcoNonFaitMontant += m; }
+    }
     map.set(key, e);
   }
   return [...map.entries()]
@@ -106,6 +137,14 @@ export function demandeurBreakdown(allOperations: Operation[]): DemandeurRow[] {
       panierMoyen: v.countAvecMontant > 0 ? v.montant / v.countAvecMontant : 0,
       gain: v.gain,
       hasGain: v.hasGain,
+      enCours: v.enCours,
+      clotures: v.clotures,
+      cloturesAvecCommande: v.cloturesAvecCommande,
+      cloturesSansCommande: v.cloturesSansCommande,
+      tcoFaitCount: v.tcoFaitCount,
+      tcoNonFaitCount: v.tcoNonFaitCount,
+      tcoFaitMontant: v.tcoFaitMontant,
+      tcoNonFaitMontant: v.tcoNonFaitMontant,
     }))
     .sort((a, b) => b.count - a.count);
 }
