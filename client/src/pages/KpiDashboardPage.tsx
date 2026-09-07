@@ -426,7 +426,7 @@ function KpiBandeau({
   return (
     <div className="rounded-lg border border-slate-300 bg-gradient-to-r from-slate-50 to-white shadow-sm p-4">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">Bandeau KPI</h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 items-start">
         <KpiTile
           label="Sujets actifs"
           value={String(k.actifs)}
@@ -434,9 +434,9 @@ function KpiBandeau({
             activeEtape.length === 0 ? (
               "en cours"
             ) : (
-              <div className="space-y-0.5">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
                 {activeEtape.map((e) => (
-                  <div key={e.label} className="flex justify-between gap-2">
+                  <div key={e.label} className="flex justify-between gap-1">
                     <span className="truncate">{e.label}</span>
                     <span className="font-medium text-slate-500 shrink-0">{e.value}</span>
                   </div>
