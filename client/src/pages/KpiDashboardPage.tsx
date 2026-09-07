@@ -20,6 +20,7 @@ import {
   demandeurBreakdown,
   entiteBreakdown,
   etapeBreakdown,
+  exploitationCommandee,
   fournisseurDrilldown,
   fournitureBreakdown,
   gainByTypeBreakdown,
@@ -168,6 +169,7 @@ function KpiDashboardContent({
   const ts = useMemo(() => tauxService(livraisons), [livraisons]);
   const nouveauxFourn = useMemo(() => nouveauxFournisseursKpi(fournisseursManuel, operations), [fournisseursManuel, operations]);
   const demandeurs = useMemo(() => demandeurBreakdown(operations), [operations]);
+  const exploitCommandee = useMemo(() => exploitationCommandee(operations), [operations]);
 
   return (
     <div className="space-y-6">
@@ -210,6 +212,8 @@ function KpiDashboardContent({
       </div>
 
       <DemandeurSection demandeurs={demandeurs} />
+
+      <ExploitationCommandeeSection data={exploitCommandee} />
 
       <Card title="Commandes par tranche de montant">
         <div className="space-y-2">
@@ -358,6 +362,46 @@ function DemandeurSection({ demandeurs }: { demandeurs: ReturnType<typeof demand
               <td className="py-1.5 px-3 text-center">{totalTcoNonFaitCount}</td>
               <td className="py-1.5 px-3 text-center">{totalTcoFaitMontant > 0 ? `CHF ${chf(totalTcoFaitMontant)}` : "—"}</td>
               <td className="py-1.5 px-3 text-center">{totalTcoNonFaitMontant > 0 ? `CHF ${chf(totalTcoNonFaitMontant)}` : "—"}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+// ===== Sujets exploitation avec commande =====
+
+function ExploitationCommandeeSection({ data }: { data: ReturnType<typeof exploitationCommandee> }) {
+  if (data.rows.length === 0) return null;
+  return (
+    <Card title="Sujets exploitation avec commande" subtitle="Uniquement les sujets exploitation ayant débouché sur une commande — trié par montant décroissant">
+      <div className="overflow-auto">
+        <table className="text-xs border-collapse mx-auto">
+          <thead>
+            <tr className="text-[10px] uppercase text-slate-400">
+              <th className="py-1.5 px-3 text-center w-24">N° Chantier</th>
+              <th className="py-1.5 px-3 text-left w-48">Nom du chantier</th>
+              <th className="py-1.5 px-3 text-left w-32">Demandeur</th>
+              <th className="py-1.5 px-3 text-left w-40">Fournisseur</th>
+              <th className="py-1.5 px-3 text-center w-28">N° commande</th>
+              <th className="py-1.5 px-3 text-center w-32">Montant (CHF)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.rows.map((r) => (
+              <tr key={r.id} className="border-t border-slate-100">
+                <td className="py-1.5 px-3 text-center">{r.chant}</td>
+                <td className="py-1.5 px-3">{r.nom}</td>
+                <td className="py-1.5 px-3">{r.dem}</td>
+                <td className="py-1.5 px-3">{r.fournisseur}</td>
+                <td className="py-1.5 px-3 text-center">{r.numCmd}</td>
+                <td className="py-1.5 px-3 text-center">CHF {chf(r.montant)}</td>
+              </tr>
+            ))}
+            <tr className="border-t-2 border-slate-300 font-semibold">
+              <td className="py-1.5 px-3" colSpan={5}>Total ({data.rows.length} sujet(s))</td>
+              <td className="py-1.5 px-3 text-center">CHF {chf(data.total)}</td>
             </tr>
           </tbody>
         </table>

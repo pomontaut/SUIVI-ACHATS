@@ -16,6 +16,20 @@ export function parseFrDate(s: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/** Reformate une date saisie librement (jj/mm/aa(aa) ou jj.mm.aa(aa)) en
+ * jj/mm/aa pour un affichage cohérent dans les rapports, quel que soit le
+ * séparateur ou la longueur d'année d'origine (ex: 20.08.2026 -> 20/08/26).
+ * Retombe sur la valeur brute si elle n'est pas reconnaissable comme une
+ * date, pour ne jamais masquer une donnée existante. */
+export function formatFrDateDisplay(s: string | null | undefined): string {
+  const d = parseFrDate(s);
+  if (!d) return s ?? "";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yy = String(d.getFullYear() % 100).padStart(2, "0");
+  return `${dd}/${mm}/${yy}`;
+}
+
 function today(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
