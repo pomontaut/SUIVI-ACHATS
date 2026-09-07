@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -15,11 +16,11 @@ import { useOptions } from "../hooks/useOptions";
 import { useResource } from "../hooks/useResource";
 import { api } from "../api";
 import {
+  activeEtapeBreakdown,
   analyseDepense,
   dashLivraisons,
   demandeurBreakdown,
   entiteBreakdown,
-  etapeBreakdown,
   exploitationCommandee,
   fournisseurDrilldown,
   fournitureBreakdown,
@@ -33,6 +34,7 @@ import {
   ratioSeuilEvolution,
   tauxService,
   tranchesBreakdown,
+  type Bucket,
   type DashLivStatus,
 } from "../lib/dashboard";
 import { exportToExcel } from "../lib/excelExport";
@@ -157,7 +159,7 @@ function KpiDashboardContent({
     [allNonConformites, entiteFilter],
   );
   const k = useMemo(() => kpis(operations), [operations]);
-  const etapeData = useMemo(() => withPct(etapeBreakdown(operations)), [operations]);
+  const activeEtapeData = useMemo(() => withPct(activeEtapeBreakdown(operations)), [operations]);
   const entiteData = useMemo(() => withPct(entiteBreakdown(operations)), [operations]);
   const fournData = useMemo(() => withPct(fournitureBreakdown(operations)), [operations]);
   const tranches = useMemo(() => tranchesBreakdown(operations, opts.TRANCHES), [operations, opts.TRANCHES]);
@@ -197,12 +199,9 @@ function KpiDashboardContent({
         {entiteFilter && <span className="text-xs text-slate-400">{operations.length} sujet(s) pour {entiteFilter}</span>}
       </div>
 
-      <KpiBandeau k={k} ratio={ratio} ts={ts} />
+      <KpiBandeau k={k} ratio={ratio} ts={ts} activeEtape={activeEtapeData} />
 
-      <div className="grid md:grid-cols-3 gap-4">
-        <ChartCard title="Statut des sujets" legend={<LegendList items={etapeData.map((d) => ({ label: d.label, value: d.value, pct: d.pct, color: d.color }))} />}>
-          <Doughnut data={{ labels: etapeData.map((d) => d.label), datasets: [{ data: etapeData.map((d) => d.value), backgroundColor: etapeData.map((d) => d.color), borderWidth: 0 }] }} options={doughnutOpts} />
-        </ChartCard>
+      <div className="grid md:grid-cols-2 gap-4">
         <ChartCard title="Sujets par entité" legend={<LegendList items={entiteData.map((d) => ({ label: d.label, value: d.value, pct: d.pct, color: d.color }))} />}>
           <Bar data={{ labels: entiteData.map((d) => d.label), datasets: [{ data: entiteData.map((d) => d.value), backgroundColor: entiteData.map((d) => d.color), borderRadius: 4 }] }} options={barOpts} />
         </ChartCard>
@@ -412,15 +411,43 @@ function ExploitationCommandeeSection({ data }: { data: ReturnType<typeof exploi
 
 // ===== Bandeau KPI =====
 
-function KpiBandeau({ k, ratio, ts }: { k: ReturnType<typeof kpis>; ratio: ReturnType<typeof ratioSeuil>; ts: ReturnType<typeof tauxService> }) {
+function KpiBandeau({
+  k,
+  ratio,
+  ts,
+  activeEtape,
+}: {
+  k: ReturnType<typeof kpis>;
+  ratio: ReturnType<typeof ratioSeuil>;
+  ts: ReturnType<typeof tauxService>;
+  activeEtape: (Bucket & { pct: number })[];
+}) {
   const gainPositive = k.gain > 0;
   return (
     <div className="rounded-lg border border-slate-300 bg-gradient-to-r from-slate-50 to-white shadow-sm p-4">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">Bandeau KPI</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-        <KpiTile label="Sujets actifs" value={String(k.actifs)} sub="en cours" color="#185FA5" />
+        <KpiTile
+          label="Sujets actifs"
+          value={String(k.actifs)}
+          sub={
+            activeEtape.length === 0 ? (
+              "en cours"
+            ) : (
+              <div className="space-y-0.5">
+                {activeEtape.map((e) => (
+                  <div key={e.label} className="flex justify-between gap-2">
+                    <span className="truncate">{e.label}</span>
+                    <span className="font-medium text-slate-500 shrink-0">{e.value}</span>
+                  </div>
+                ))}
+              </div>
+            )
+          }
+          color="#185FA5"
+          className="col-span-2"
+        />
         <KpiTile label="Clôturés" value={String(k.clos)} sub="terminés" color="#3B6D11" />
-        <KpiTile label="En attente" value={String(k.att)} sub="réponse fournisseur" color="#854F0B" />
         <KpiTile label="Montant commandé" value={`CHF ${chf(k.montant)}`} sub="total" color="#185FA5" small />
         <KpiTile
           label="Gains / Pertes"
@@ -429,17 +456,43 @@ function KpiBandeau({ k, ratio, ts }: { k: ReturnType<typeof kpis>; ratio: Retur
           color={gainPositive ? "#A32D2D" : "#3B6D11"}
           small
         />
-        <KpiTile label="Fournisseurs" value={String(k.fournisseurs)} sub="actifs" color="#534AB7" />
-        <KpiTile label="Cmd < 5000 CHF" value={`${ratio.pctCountBelow}%`} sub={`${ratio.countBelow} cmd`} color="#0F6E56" />
+        <KpiTile label="Fournisseurs" value={String(k.fournisseurs)} sub="distincts, sur sujets actifs" color="#534AB7" />
+        <KpiTile
+          label="Cmd < 5000 CHF"
+          value={`${ratio.pctCountBelow}%`}
+          sub={
+            <>
+              <div>{ratio.countBelow} cmd</div>
+              <div>
+                CHF {chf(ratio.montantBelow)} ({ratio.pctMontantBelow}% du montant)
+              </div>
+            </>
+          }
+          color="#0F6E56"
+        />
         <KpiTile label="Taux de service" value={ts.denom > 0 ? `${ts.ts}%` : "—"} sub={`${ts.onTimeCount}/${ts.denom} évaluées`} color={ts.tsColor} />
       </div>
     </div>
   );
 }
 
-function KpiTile({ label, value, sub, color, small }: { label: string; value: string; sub: string; color: string; small?: boolean }) {
+function KpiTile({
+  label,
+  value,
+  sub,
+  color,
+  small,
+  className,
+}: {
+  label: string;
+  value: string;
+  sub: ReactNode;
+  color: string;
+  small?: boolean;
+  className?: string;
+}) {
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-3">
+    <div className={`bg-white rounded-lg border border-slate-200 p-3 ${className ?? ""}`}>
       <div className="text-[10px] text-slate-500">{label}</div>
       <div className={`${small ? "text-sm" : "text-xl"} font-semibold mt-1`} style={{ color }}>{value}</div>
       <div className="text-[10px] text-slate-400 mt-0.5">{sub}</div>

@@ -1,5 +1,5 @@
 import { dateVal } from "./tableFilter";
-import { isAtt, isClos } from "./etape";
+import { isClos } from "./etape";
 import { joursRetard, livraisonCategorie, parseFrDate, workingDaysBetween } from "./dates";
 import { isAutoPrioType, operationNeedsWarning, operationPrio, prioRank } from "./priority";
 import type { Fournisseur, Livraison, NonConformite, Operation, Options, Todo, Transverse } from "../types";
@@ -26,7 +26,6 @@ const COL_GAIN = ["#3B6D11", "#185FA5", "#534AB7", "#854F0B", "#888780"];
 export function kpis(operations: Operation[]) {
   const actifs = operations.filter((o) => !isClos(o.etape)).length;
   const clos = operations.filter((o) => isClos(o.etape)).length;
-  const att = operations.filter((o) => isAtt(o.etape)).length;
   const montant = operations.reduce((s, o) => s + num(o.montant), 0);
   let gain = 0;
   for (const o of operations) {
@@ -36,8 +35,13 @@ export function kpis(operations: Operation[]) {
     if (!Number.isNaN(b) && b > 0 && !Number.isNaN(m) && m > 0) gain += m - b;
     else if (!Number.isNaN(g)) gain += g;
   }
-  const fournisseurs = new Set(operations.map((o) => o.fournisseur).filter((f) => f && f.trim())).size;
-  return { actifs, clos, att, montant, gain, fournisseurs };
+  // Fournisseurs distincts sur les sujets encore actifs (non clôturés) : c'est
+  // ce nombre-là qui a un sens à côté de "Sujets actifs", contrairement à un
+  // total tous statuts confondus qui ne reflèterait pas l'activité en cours.
+  const fournisseurs = new Set(
+    operations.filter((o) => !isClos(o.etape)).map((o) => o.fournisseur).filter((f) => f && f.trim())
+  ).size;
+  return { actifs, clos, montant, gain, fournisseurs };
 }
 
 function topN(counts: Record<string, number>, n: number, colors: string[]): Bucket[] {
@@ -51,6 +55,12 @@ export function etapeBreakdown(operations: Operation[]): Bucket[] {
   const c: Record<string, number> = {};
   operations.forEach((o) => { const k = o.etape || "?"; c[k] = (c[k] ?? 0) + 1; });
   return topN(c, 6, COL_ETAPE);
+}
+
+/** Sous-détail des sujets actifs (non clôturés) par étape, affiché dans la
+ * tuile "Sujets actifs" du bandeau KPI plutôt que dans un donut séparé. */
+export function activeEtapeBreakdown(operations: Operation[]): Bucket[] {
+  return etapeBreakdown(operations.filter((o) => !isClos(o.etape)));
 }
 
 export function entiteBreakdown(operations: Operation[]): Bucket[] {
