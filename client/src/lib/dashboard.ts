@@ -149,6 +149,36 @@ export function demandeurBreakdown(allOperations: Operation[]): DemandeurRow[] {
     .sort((a, b) => b.count - a.count);
 }
 
+export interface ExploitationCommandeeRow {
+  id: string;
+  chant: string;
+  nom: string;
+  dem: string;
+  fournisseur: string;
+  numCmd: string;
+  montant: number;
+}
+
+/** Sujets exploitation ayant débouché sur une commande (montant renseigné),
+ * avec le montant en face - à l'image de la Vue par demandeur, mais au
+ * niveau du sujet plutôt qu'agrégé par demandeur. Triée par montant
+ * décroissant. */
+export function exploitationCommandee(operations: Operation[]): { rows: ExploitationCommandeeRow[]; total: number } {
+  const rows = operations
+    .filter((o) => isAutoPrioType(o.type) === "exploitation" && num(o.montant) > 0)
+    .map((o) => ({
+      id: o.id,
+      chant: o.chant || "—",
+      nom: o.nom || "—",
+      dem: o.dem || "—",
+      fournisseur: o.fournisseur || "—",
+      numCmd: o.numCmd || "—",
+      montant: num(o.montant),
+    }))
+    .sort((a, b) => b.montant - a.montant);
+  return { rows, total: rows.reduce((s, r) => s + r.montant, 0) };
+}
+
 export interface TrancheResult {
   lbl: string;
   col: string;

@@ -8,7 +8,7 @@ import { AoPostesComparatif, type PostesComparatifHandle } from "../components/A
 import { AoCriteresTechComparatif, type CriteresTechComparatifHandle } from "../components/AoCriteresTechComparatif";
 import { useResource } from "../hooks/useResource";
 import { useOptions } from "../hooks/useOptions";
-import { dateVal } from "../lib/tableFilter";
+import { formatFrDateDisplay, parseFrDate } from "../lib/dates";
 import { api } from "../api";
 import type { AoSujet, AppelOffre } from "../types";
 
@@ -37,7 +37,16 @@ interface AoGroup {
   dem: string;
   prec: string;
   auto: boolean; // au moins une ligne générée automatiquement (TCO=oui) -> chant/nom/objet en lecture seule
+  dateRetourMax: string | null; // reprise du Retour max de l'Opérationnel, pour trier les sujets par échéance
   rows: AppelOffre[];
+}
+
+/** Trie les sujets AO par date de retour max, de la plus rapprochée à la
+ * plus éloignée de la date du jour ; les sujets sans échéance renseignée
+ * passent en dernier plutôt qu'en premier (ce ne sont pas les plus urgents). */
+function retourMaxSortKey(g: AoGroup): number {
+  const d = parseFrDate(g.dateRetourMax);
+  return d ? d.getTime() : Infinity;
 }
 
 /** Un "sujet AO" = même date + même chantier + même objet (Précisions) - un
@@ -52,12 +61,13 @@ function buildAoGroups(rows: AppelOffre[]): AoGroup[] {
     if (!g) {
       g = {
         key: gkey, numeroAO: "", date: r.date, chant: r.chant ?? "", nom: r.nom || "—",
-        ent: r.ent ?? "", dem: r.dem ?? "", prec: r.prec || "—", auto: false, rows: [],
+        ent: r.ent ?? "", dem: r.dem ?? "", prec: r.prec || "—", auto: false, dateRetourMax: null, rows: [],
       };
       groups.set(gkey, g);
       order.push(gkey);
     }
     if (r.operationId) g.auto = true;
+    if (!g.dateRetourMax && r.dateRetourMax) g.dateRetourMax = r.dateRetourMax;
     g.rows.push(r);
   }
   const seenDateChant = new Map<string, number>();
@@ -69,7 +79,7 @@ function buildAoGroups(rows: AppelOffre[]): AoGroup[] {
     const base = `${dateCompact(g.date)}-${g.chant || "SANSCHANT"}`;
     g.numeroAO = n === 1 ? base : `${base}-${n}`;
   }
-  return [...groups.values()].sort((a, b) => dateVal(b.date) - dateVal(a.date));
+  return [...groups.values()].sort((a, b) => retourMaxSortKey(a) - retourMaxSortKey(b));
 }
 
 export function AppelsOffresPage() {
@@ -250,7 +260,7 @@ function AoGroupCard({
             />
             <input
               className="input w-24"
-              defaultValue={group.date ?? ""}
+              defaultValue={formatFrDateDisplay(group.date)}
               placeholder="jj/mm/aa"
               onBlur={(e) => { if (e.target.value !== (group.date ?? "")) onUpdateGroup({ date: e.target.value }); }}
             />
@@ -322,20 +332,20 @@ function AoGroupCard({
                 </td>
                 <td className="py-1.5 px-2">
                   {r.operationId ? (
-                    <span className="text-slate-600" title="Reprise du Lancement de l'Opérationnel">{r.dateEnvoi || "—"}</span>
+                    <span className="text-slate-600" title="Reprise du Lancement de l'Opérationnel">{formatFrDateDisplay(r.dateEnvoi) || "—"}</span>
                   ) : (
-                    <input className="input w-24" placeholder="jj/mm/aa" defaultValue={r.dateEnvoi ?? ""} onBlur={(e) => { if (e.target.value !== (r.dateEnvoi ?? "")) onUpdateRow(r.id, { dateEnvoi: e.target.value }); }} />
+                    <input className="input w-24" placeholder="jj/mm/aa" defaultValue={formatFrDateDisplay(r.dateEnvoi)} onBlur={(e) => { if (e.target.value !== (r.dateEnvoi ?? "")) onUpdateRow(r.id, { dateEnvoi: e.target.value }); }} />
                   )}
                 </td>
                 <td className="py-1.5 px-2">
                   {r.operationId ? (
-                    <span className="text-slate-600" title="Repris du Retour max de l'Opérationnel">{r.dateRetourMax || "—"}</span>
+                    <span className="text-slate-600" title="Repris du Retour max de l'Opérationnel">{formatFrDateDisplay(r.dateRetourMax) || "—"}</span>
                   ) : (
-                    <input className="input w-24" placeholder="jj/mm/aa" defaultValue={r.dateRetourMax ?? ""} onBlur={(e) => { if (e.target.value !== (r.dateRetourMax ?? "")) onUpdateRow(r.id, { dateRetourMax: e.target.value }); }} />
+                    <input className="input w-24" placeholder="jj/mm/aa" defaultValue={formatFrDateDisplay(r.dateRetourMax)} onBlur={(e) => { if (e.target.value !== (r.dateRetourMax ?? "")) onUpdateRow(r.id, { dateRetourMax: e.target.value }); }} />
                   )}
                 </td>
                 <td className="py-1.5 px-2">
-                  <input className="input w-24" placeholder="jj/mm/aa" defaultValue={r.dateRetour ?? ""} onBlur={(e) => { if (e.target.value !== (r.dateRetour ?? "")) onUpdateRow(r.id, { dateRetour: e.target.value }); }} />
+                  <input className="input w-24" placeholder="jj/mm/aa" defaultValue={formatFrDateDisplay(r.dateRetour)} onBlur={(e) => { if (e.target.value !== (r.dateRetour ?? "")) onUpdateRow(r.id, { dateRetour: e.target.value }); }} />
                 </td>
                 <td className="py-1.5 px-2 text-right">
                   <div className="flex flex-col items-end gap-1">
