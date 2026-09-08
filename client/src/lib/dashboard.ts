@@ -235,9 +235,9 @@ export interface PertinenceAchatResult {
   totalCmd: number;
 }
 
-const COL_NIVEAU: Record<NiveauPertinence, string> = { "Élevé": "#3B6D11", "Moyen": "#854F0B", "Faible": "#A32D2D" };
+export const COL_NIVEAU: Record<NiveauPertinence, string> = { "Élevé": "#3B6D11", "Moyen": "#854F0B", "Faible": "#A32D2D" };
 
-function niveauDe(indice: number): NiveauPertinence {
+export function niveauDe(indice: number): NiveauPertinence {
   if (indice >= 0.75) return "Élevé";
   if (indice >= 0.5) return "Moyen";
   return "Faible";
