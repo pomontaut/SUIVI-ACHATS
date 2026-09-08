@@ -477,7 +477,7 @@ function KpiBandeau({
         <KpiTile label="Taux de service" value={ts.denom > 0 ? `${ts.ts}%` : "—"} sub={`${ts.onTimeCount}/${ts.denom} évaluées`} color={ts.tsColor} />
         <KpiTile
           label="Indice de pertinence achats"
-          value={pert.totalCmd > 0 ? pert.indiceMoyen.toFixed(2) : "—"}
+          value={pert.totalCmd > 0 ? `${pert.indiceMoyen.toFixed(2)} / 1` : "—"}
           sub={pert.totalCmd > 0 ? `${niveauDe(pert.indiceMoyen)} · ${pert.totalCmd} cmd` : "aucune commande analysée"}
           color={pert.totalCmd > 0 ? COL_NIVEAU[niveauDe(pert.indiceMoyen)] : "#888780"}
         />
@@ -775,7 +775,7 @@ function PertinenceSection({ pert, config }: { pert: ReturnType<typeof pertinenc
         Critère Type de commande = barème selon le "Type action achat" (AO &amp; TCO fait = 1 … Faible montant = 0). Sujets exclus si montant ou type d'action achat non renseigné/non reconnu.
       </p>
       <div className="grid grid-cols-4 gap-2">
-        <MiniStat label="Indice moyen" value={pert.indiceMoyen.toFixed(2)} />
+        <MiniStat label="Indice moyen" value={`${pert.indiceMoyen.toFixed(2)} / 1`} />
         {pert.byNiveau.map((n) => (
           <MiniStat key={n.niveau} label={`${n.niveau} (${n.pct}%)`} value={`${n.count} · CHF ${chf(n.montant)}`} color={n.color} />
         ))}
