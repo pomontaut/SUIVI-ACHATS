@@ -205,41 +205,84 @@ export function tranchesBreakdown(operations: Operation[], tranches: Options["TR
   });
 }
 
-export function getPertCat(comment: string | null, typeActionAchat: string | null, tco: string | null, pertCats: Options["PERT_CATS"]): string {
-  if ((tco ?? "").toLowerCase() === "oui") return "tco";
-  const combined = `${comment ?? ""} ${typeActionAchat ?? ""}`.toLowerCase();
-  for (const cat of pertCats) {
-    if (cat.key === "other") continue;
-    if (cat.kw.some((kw) => combined.includes(kw))) return cat.key;
-  }
-  return "other";
+export type NiveauPertinence = "Élevé" | "Moyen" | "Faible";
+
+export interface PertinenceAchatRow {
+  id: string;
+  chant: string;
+  nom: string;
+  numCmd: string;
+  montant: number;
+  typeActionAchat: string;
+  critereA: number;
+  critereB: number;
+  indice: number;
+  niveau: NiveauPertinence;
 }
 
-export interface PertResult {
-  key: string;
-  label: string;
+export interface PertinenceNiveauResult {
+  niveau: NiveauPertinence;
   count: number;
   pct: number;
-  total: number;
+  montant: number;
   color: string;
 }
 
-const COL_PERT = ["#185FA5", "#3B6D11", "#534AB7", "#854F0B", "#A32D2D", "#0F6E56", "#C2410C", "#0369A1", "#888780"];
+export interface PertinenceAchatResult {
+  rows: PertinenceAchatRow[];
+  byNiveau: PertinenceNiveauResult[];
+  indiceMoyen: number;
+  totalCmd: number;
+}
 
-export function pertBreakdown(operations: Operation[], pertCats: Options["PERT_CATS"]): { rows: PertResult[]; totalCmd: number } {
-  const cmdRows = operations.filter((o) => num(o.montant) > 0);
-  const byKey = new Map(pertCats.map((c) => [c.key, { count: 0, total: 0 }]));
-  for (const o of cmdRows) {
-    const key = getPertCat(o.comment, o.typeActionAchat, o.tco, pertCats);
-    const entry = byKey.get(key)!;
-    entry.count++;
-    entry.total += num(o.montant);
+const COL_NIVEAU: Record<NiveauPertinence, string> = { "Élevé": "#3B6D11", "Moyen": "#854F0B", "Faible": "#A32D2D" };
+
+function niveauDe(indice: number): NiveauPertinence {
+  if (indice >= 0.75) return "Élevé";
+  if (indice >= 0.5) return "Moyen";
+  return "Faible";
+}
+
+/** Indice de pertinence de passation de commande : combine un critère
+ * Montant (fonction puissance convexe vers un seuil, pour éviter l'effet de
+ * seuil binaire d'un simple "< X CHF") et un critère Type de commande /
+ * méthode de sourcing (barème configurable dans PERTINENCE_ACHAT.bareme).
+ * Les sujets sans montant ou dont le type d'action achat ne figure pas dans
+ * le barème (ex : "Besoin annulé") sont exclus, faute de pouvoir calculer le
+ * critère B. Trié du moins pertinent au plus pertinent, pour faire ressortir
+ * en premier les commandes à surveiller. */
+export function pertinenceAchatBreakdown(operations: Operation[], config: Options["PERTINENCE_ACHAT"]): PertinenceAchatResult {
+  const bareme = new Map(config.bareme.map((b) => [b.label, b.score]));
+  const rows: PertinenceAchatRow[] = [];
+  for (const o of operations) {
+    const montant = num(o.montant);
+    if (montant <= 0) continue;
+    const critereB = o.typeActionAchat ? bareme.get(o.typeActionAchat) : undefined;
+    if (critereB === undefined) continue;
+    const critereA = Math.min(1, Math.pow(montant / config.seuilMontant, config.exposant));
+    const indice = config.poidsMontant * critereA + config.poidsType * critereB;
+    rows.push({
+      id: o.id,
+      chant: o.chant || "—",
+      nom: o.nom || "—",
+      numCmd: o.numCmd || "—",
+      montant,
+      typeActionAchat: o.typeActionAchat ?? "",
+      critereA,
+      critereB,
+      indice,
+      niveau: niveauDe(indice),
+    });
   }
-  const rows = pertCats.map((c, i) => {
-    const e = byKey.get(c.key)!;
-    return { key: c.key, label: c.label, count: e.count, total: e.total, pct: cmdRows.length > 0 ? Math.round((e.count / cmdRows.length) * 100) : 0, color: COL_PERT[i % COL_PERT.length] };
+  rows.sort((a, b) => a.indice - b.indice);
+  const total = rows.length;
+  const niveaux: NiveauPertinence[] = ["Élevé", "Moyen", "Faible"];
+  const byNiveau = niveaux.map((n) => {
+    const subset = rows.filter((r) => r.niveau === n);
+    return { niveau: n, count: subset.length, pct: total > 0 ? Math.round((subset.length / total) * 100) : 0, montant: subset.reduce((s, r) => s + r.montant, 0), color: COL_NIVEAU[n] };
   });
-  return { rows, totalCmd: cmdRows.length };
+  const indiceMoyen = total > 0 ? rows.reduce((s, r) => s + r.indice, 0) / total : 0;
+  return { rows, byNiveau, indiceMoyen, totalCmd: total };
 }
 
 const GAIN_CATS = ["Budget soumission", "Cost avoidance", "Budget meilleure offre conforme", "Budget contrat cadre", "Autres"];

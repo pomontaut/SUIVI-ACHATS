@@ -24,7 +24,7 @@ const OPTIONS = {
   AO_VALIDATION_OPTS: ["Adjudicataire", "Pas répondu", "Non retenu", "Ne veut pas soumettre offre", "Ne sait pas faire"],
   AO_STATUT_COMMANDE_OPTS: ["En cours", "Commandé", "Annulé"],
   TD_STATUTS: seedData.TD_STATUTS,
-  PERT_CATS: seedData.PERT_CATS,
+  PERTINENCE_ACHAT: seedData.PERTINENCE_ACHAT,
   TRANCHES: seedData.TRANCHES,
 };
 

@@ -17,6 +17,7 @@ import { fichierRouter } from "./lib/fichierRoutes.js";
 import { syncLivraisonsFromOperations } from "./lib/syncLivraisons.js";
 import { syncAppelsOffresFromOperations } from "./lib/syncAppelsOffres.js";
 import { syncSuiviAdministratifFromOperations } from "./lib/syncSuiviAdministratif.js";
+import { normalizeCommentOpts } from "./lib/normalizeCommentOpts.js";
 import { uploadsDir } from "./lib/uploads.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -66,6 +67,7 @@ app.get(/^(?!\/api|\/uploads).*/, (_req, res) => {
 });
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
+await normalizeCommentOpts();
 app.listen(port, () => {
   console.log(`Suivi Achats API démarrée sur le port ${port}`);
 });

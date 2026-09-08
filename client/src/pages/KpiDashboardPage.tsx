@@ -28,7 +28,7 @@ import {
   kpis,
   monthRangeOf,
   nouveauxFournisseursKpi,
-  pertBreakdown,
+  pertinenceAchatBreakdown,
   prochainesLivraisons,
   ratioSeuil,
   ratioSeuilEvolution,
@@ -39,7 +39,7 @@ import {
 } from "../lib/dashboard";
 import { exportToExcel } from "../lib/excelExport";
 import { Badge, Card, ChartCard, EmptyLine, LegendList, MiniStat, chf, withPct } from "../components/dashboardUi";
-import type { Fournisseur, Livraison, NonConformite, Operation } from "../types";
+import type { Fournisseur, Livraison, NonConformite, Operation, Options } from "../types";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, LineElement, PointElement, Tooltip, Legend);
 
@@ -163,7 +163,7 @@ function KpiDashboardContent({
   const entiteData = useMemo(() => withPct(entiteBreakdown(operations)), [operations]);
   const fournData = useMemo(() => withPct(fournitureBreakdown(operations)), [operations]);
   const tranches = useMemo(() => tranchesBreakdown(operations, opts.TRANCHES), [operations, opts.TRANCHES]);
-  const pert = useMemo(() => pertBreakdown(operations, opts.PERT_CATS), [operations, opts.PERT_CATS]);
+  const pert = useMemo(() => pertinenceAchatBreakdown(operations, opts.PERTINENCE_ACHAT), [operations, opts.PERTINENCE_ACHAT]);
   const gainType = useMemo(() => gainByTypeBreakdown(operations), [operations]);
   const prochLiv = useMemo(() => prochainesLivraisons(operations), [operations]);
   const ratio = useMemo(() => ratioSeuil(operations), [operations]);
@@ -235,7 +235,7 @@ function KpiDashboardContent({
 
       <RatioSeuilSection ratio={ratio} evolution={ratioEvol} />
 
-      <PertinenceSection pert={pert} />
+      <PertinenceSection pert={pert} config={opts.PERTINENCE_ACHAT} />
 
       <GainSection gainType={gainType} />
 
@@ -752,42 +752,59 @@ function CumulRatioChart({ evolution, seuil }: { evolution: ReturnType<typeof ra
   );
 }
 
-// ===== Indicateur de pertinence (redesigné en petits graphiques) =====
+// ===== Indice de pertinence des achats =====
 
-function PertinenceSection({ pert }: { pert: ReturnType<typeof pertBreakdown> }) {
-  const totalMontant = pert.rows.reduce((s, r) => s + r.total, 0);
+function PertinenceSection({ pert, config }: { pert: ReturnType<typeof pertinenceAchatBreakdown>; config: Options["PERTINENCE_ACHAT"] }) {
+  const colorByNiveau = new Map(pert.byNiveau.map((n) => [n.niveau, n.color]));
   return (
-    <div className="grid md:grid-cols-2 gap-4">
-      <ChartCard
-        title="Pertinence des commandes — en nombre"
-        subtitle={`${pert.totalCmd} commandes analysées, par typologie d'action`}
-        legend={<LegendList items={pert.rows.map((p) => ({ label: p.label, value: p.count, pct: p.pct, color: p.color }))} />}
-      >
-        <Bar
-          data={{ labels: pert.rows.map((p) => p.label), datasets: [{ data: pert.rows.map((p) => p.count), backgroundColor: pert.rows.map((p) => p.color), borderRadius: 4 }] }}
-          options={barOpts}
-        />
-      </ChartCard>
-      <ChartCard
-        title="Pertinence des commandes — en montant"
-        subtitle="Répartition du montant (CHF) par typologie d'action"
-        legend={
-          <LegendList
-            items={pert.rows.map((p) => ({
-              label: p.label,
-              value: `CHF ${chf(p.total)}`,
-              pct: totalMontant > 0 ? Math.round((p.total / totalMontant) * 100) : 0,
-              color: p.color,
-            }))}
-          />
-        }
-      >
-        <Bar
-          data={{ labels: pert.rows.map((p) => p.label), datasets: [{ data: pert.rows.map((p) => p.total), backgroundColor: pert.rows.map((p) => p.color), borderRadius: 4 }] }}
-          options={{ ...barOpts, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `CHF ${chf(Number(ctx.raw))}` } } } }}
-        />
-      </ChartCard>
-    </div>
+    <Card
+      title="Indice de pertinence des achats"
+      subtitle={`Indice = ${Math.round(config.poidsMontant * 100)}% × critère Montant + ${Math.round(config.poidsType * 100)}% × critère Type de commande — trié du moins au plus pertinent`}
+    >
+      <p className="text-[11px] text-slate-400 mb-3">
+        Critère Montant = min(1, (montant / CHF {chf(config.seuilMontant)})<sup>{config.exposant}</sup>) — plafonne à 1 dès CHF {chf(config.seuilMontant)}.
+        Critère Type de commande = barème selon le "Type action achat" (AO &amp; TCO fait = 1 … Faible montant = 0). Sujets exclus si montant ou type d'action achat non renseigné/non reconnu.
+      </p>
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        {pert.byNiveau.map((n) => (
+          <MiniStat key={n.niveau} label={`${n.niveau} (${n.pct}%)`} value={`${n.count} · CHF ${chf(n.montant)}`} color={n.color} />
+        ))}
+      </div>
+      {pert.rows.length === 0 ? (
+        <EmptyLine text="Aucune commande avec montant et type d'action achat reconnu." />
+      ) : (
+        <div className="overflow-auto">
+          <table className="text-xs border-collapse mx-auto">
+            <thead>
+              <tr className="text-[10px] uppercase text-slate-400">
+                <th className="py-1.5 px-3 text-center w-24">N° Chantier</th>
+                <th className="py-1.5 px-3 text-left w-48">Nom du chantier</th>
+                <th className="py-1.5 px-3 text-left w-56">Type action achat</th>
+                <th className="py-1.5 px-3 text-center w-28">Montant (CHF)</th>
+                <th className="py-1.5 px-3 text-center w-24">Critère A</th>
+                <th className="py-1.5 px-3 text-center w-24">Critère B</th>
+                <th className="py-1.5 px-3 text-center w-20">Indice</th>
+                <th className="py-1.5 px-3 text-center w-20">Niveau</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pert.rows.map((r) => (
+                <tr key={r.id} className="border-t border-slate-100">
+                  <td className="py-1.5 px-3 text-center">{r.chant}</td>
+                  <td className="py-1.5 px-3">{r.nom}</td>
+                  <td className="py-1.5 px-3">{r.typeActionAchat}</td>
+                  <td className="py-1.5 px-3 text-center">CHF {chf(r.montant)}</td>
+                  <td className="py-1.5 px-3 text-center">{r.critereA.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-center">{r.critereB.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-center font-medium">{r.indice.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-center font-medium" style={{ color: colorByNiveau.get(r.niveau) }}>{r.niveau}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }
 

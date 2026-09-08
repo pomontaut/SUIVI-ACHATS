@@ -230,6 +230,12 @@ export interface Options {
   AO_VALIDATION_OPTS: string[];
   AO_STATUT_COMMANDE_OPTS: string[];
   TD_STATUTS: string[];
-  PERT_CATS: { key: string; label: string; kw: string[] }[];
+  PERTINENCE_ACHAT: {
+    poidsMontant: number;
+    poidsType: number;
+    seuilMontant: number;
+    exposant: number;
+    bareme: { label: string; score: number }[];
+  };
   TRANCHES: { lbl: string; min: number; max: number | null; col: string }[];
 }
