@@ -97,14 +97,10 @@
     "AO & TCO FAIT",
     "Fournisseur imposé",
     "Accord cadre utilisé",
-    "Commande contrat cadre",
     "Demande passation de commande",
-    "Passation sur devis",
     "Urgence / dispo stock / délai court",
-    "Au plus vite",
     "Source unique",
     "Pénurie / contrainte approvisionnement",
-    "Pas le choix du fournisseur",
     "Faible montant"
   ],
   "BUDGET_TYPE_OPTS": [
