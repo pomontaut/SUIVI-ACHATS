@@ -9438,85 +9438,22 @@
     "Clôturée",
     "Sans suite"
   ],
-  "PERT_CATS": [
-    {
-      "key": "tco",
-      "label": "TCO fait",
-      "kw": [
-        "tco fait",
-        "ao & tco fait"
-      ]
-    },
-    {
-      "key": "accord",
-      "label": "Accord cadre",
-      "kw": [
-        "accord cadre",
-        "commande contrat cadre",
-        "contrat cadre",
-        "suit recommandation accord cadre"
-      ]
-    },
-    {
-      "key": "devis",
-      "label": "Passation sur devis",
-      "kw": [
-        "passation de commande sur devis",
-        "passation commande sur devis",
-        "passation sur devis"
-      ]
-    },
-    {
-      "key": "unique",
-      "label": "Source unique",
-      "kw": [
-        "source unique"
-      ]
-    },
-    {
-      "key": "penurie",
-      "label": "Pénurie/contrainte",
-      "kw": [
-        "pénurie",
-        "penurie",
-        "répartir",
-        "dupliquer",
-        "contrainte approvisionnement"
-      ]
-    },
-    {
-      "key": "choix",
-      "label": "Pas le choix",
-      "kw": [
-        "pas le choix"
-      ]
-    },
-    {
-      "key": "faible",
-      "label": "Faible montant",
-      "kw": [
-        "faible montant",
-        "inf. à 5k",
-        "commande inf"
-      ]
-    },
-    {
-      "key": "urgent",
-      "label": "Urgence",
-      "kw": [
-        "au plus vite",
-        "asap",
-        "urgent",
-        "urgence",
-        "dispo stock"
-      ]
-    },
-    {
-      "key": "other",
-      "label": "Autre/non renseigné",
-      "kw": []
-    }
-  ],
+  "PERTINENCE_ACHAT": {
+    "poidsMontant": 0.5,
+    "poidsType": 0.5,
+    "seuilMontant": 10000,
+    "exposant": 2,
+    "bareme": [
+      { "label": "AO & TCO FAIT", "score": 1 },
+      { "label": "Pénurie / contrainte approvisionnement", "score": 0.83 },
+      { "label": "Urgence / dispo stock / délai court", "score": 0.67 },
+      { "label": "Accord cadre utilisé", "score": 0.5 },
+      { "label": "Source unique", "score": 0.33 },
+      { "label": "Fournisseur imposé", "score": 0.17 },
+      { "label": "Demande passation de commande", "score": 0 },
+      { "label": "Faible montant", "score": 0 }
+    ]
+  },
   "TRANCHES": [
     {
       "lbl": "0 – 1 000 CHF",
