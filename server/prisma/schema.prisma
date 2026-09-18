@@ -290,6 +290,27 @@ model CahierDesCharges {
   updatedAt      DateTime @updatedAt
 }
 
+// Étape amont de l'Opérationnel : la demande d'achat initiale formulée par
+// le demandeur, avant validation et création éventuelle d'un sujet suivi
+// dans l'Opérationnel. Aucune synchro automatique avec Operation.
+model DemandeAchat {
+  id             String   @id @default(cuid())
+  date           String?
+  dem            String?
+  ent            String?
+  chant          String?
+  nom            String?
+  objet          String?
+  justification  String?
+  montantEstime  String?
+  fournisseur    String?
+  urgence        String?
+  statut         String?  @default("En attente")
+  rem            String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 // Référentiel fournisseurs (import Abacus / ERP + ajouts manuels)
 model Fournisseur {
   id        String   @id @default(cuid())

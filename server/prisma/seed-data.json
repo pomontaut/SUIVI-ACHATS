@@ -11320,6 +11320,12 @@
     "Actif",
     "Clôturé"
   ],
+  "STATUT_DEMANDE_OPTS": [
+    "En attente",
+    "Validée",
+    "Refusée",
+    "Transformée en commande"
+  ],
   "TD_COLS": [
     {
       "lbl": "✓ Vu",

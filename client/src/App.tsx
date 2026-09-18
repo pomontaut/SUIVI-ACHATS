@@ -4,6 +4,7 @@ import { OptionsContext } from "./hooks/useOptions";
 import type { Options } from "./types";
 import { KpiDashboardPage } from "./pages/KpiDashboardPage";
 import { OperationsPage } from "./pages/OperationsPage";
+import { DemandeAchatPage } from "./pages/DemandeAchatPage";
 import { TransversePage } from "./pages/TransversePage";
 import { TodoPage } from "./pages/TodoPage";
 import { NonConformitesPage } from "./pages/NonConformitesPage";
@@ -15,6 +16,7 @@ import { DiagnosticPage } from "./pages/DiagnosticPage";
 
 const TABS = [
   { id: "kpi-dashboard", label: "Tableau de bord – KPI" },
+  { id: "demande-achat", label: "Demande d'achat" },
   { id: "operations", label: "Opérationnel" },
   { id: "transverse", label: "Transverse" },
   { id: "todo", label: "To-do" },
@@ -65,6 +67,7 @@ export default function App() {
         ) : (
           <OptionsContext.Provider value={options}>
             {tab === "kpi-dashboard" && <KpiDashboardPage />}
+            {tab === "demande-achat" && <DemandeAchatPage />}
             {tab === "operations" && <OperationsPage />}
             {tab === "transverse" && <TransversePage />}
             {tab === "todo" && <TodoPage />}

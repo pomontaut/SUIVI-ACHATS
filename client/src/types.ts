@@ -181,6 +181,21 @@ export interface SuiviAdministratif extends Base {
   blFichierUrl: string | null;
 }
 
+export interface DemandeAchat extends Base {
+  date: string | null;
+  dem: string | null;
+  ent: string | null;
+  chant: string | null;
+  nom: string | null;
+  objet: string | null;
+  justification: string | null;
+  montantEstime: string | null;
+  fournisseur: string | null;
+  urgence: string | null;
+  statut: string | null;
+  rem: string | null;
+}
+
 export interface CahierDesCharges extends Base {
   groupeMarchandise: string | null;
   fourniture: string | null;
@@ -230,6 +245,7 @@ export interface Options {
   AO_VALIDATION_OPTS: string[];
   AO_STATUT_COMMANDE_OPTS: string[];
   TD_STATUTS: string[];
+  STATUT_DEMANDE_OPTS: string[];
   PERTINENCE_ACHAT: {
     poidsMontant: number;
     poidsType: number;
